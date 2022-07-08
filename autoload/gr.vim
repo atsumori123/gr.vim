@@ -1,3 +1,6 @@
+let s:save_cpo = &cpoptions
+set cpoptions&vim
+
 "-------------------------------------------------------
 " make_menu()
 "-------------------------------------------------------
@@ -463,7 +466,7 @@ endfunction
 "-------------------------------------------------------
 " Gr()
 "-------------------------------------------------------
-function! Gr(range, line1, line2) abort
+function! Gr#Gr(range, line1, line2) abort
 	let s:popup_enable = v:version >= 802 ? 1 : 0
 
 	if a:range
@@ -485,4 +488,6 @@ function! Gr(range, line1, line2) abort
 		call s:OpenBuffer("MAIN")
 	endif
 endfunction
-	
+
+let &cpoptions = s:save_cpo
+unlet s:save_cpo
