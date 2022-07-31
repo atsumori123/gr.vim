@@ -11,7 +11,7 @@ if !exists('g:GREPDIR')
 	let g:GREPDIR= [getcwd(), getcwd(), getcwd(), getcwd(), getcwd()]
 else
 	for i in range(len(g:GREPDIR), 5)
-		call add(g:GREPDIR, getcwd)
+		call add(g:GREPDIR, getcwd())
 	endfor
 endif
 
