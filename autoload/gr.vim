@@ -28,10 +28,37 @@ function! s:make_menu(mid) abort
 		let menu = copy(s:grStrDir)
 		call map(menu, '" ".v:val')
     	call add(menu, " < current directory >")
-		let s:short_cut_key = '12345c'
+		let s:short_cut_key = ''
 	endif
 
 	return menu
+endfunction
+
+"-------------------------------------------------------
+" redraw_part()
+"-------------------------------------------------------
+function! s:redraw_part(id) abort
+	if a:id == 1
+		let menu = " Search pattern:   ".s:grPattern
+	elseif a:id == 2
+		let menu = " Directory:        ".s:grStrDir[0]
+	elseif a:id == 3
+		let menu = " Filter:           ".s:grFilter
+	elseif a:id == 4
+		let menu = printf(" Word search:      %s", and(s:grOption, 0x01) ? "on" : "off")
+	elseif a:id == 5
+		let menu = printf(" Case-sensitive:   %s", and(s:grOption, 0x02) ? "on" : "off")
+	elseif a:id == 6
+		let menu = printf(" Regexp(.*foo):    %s", and(s:grOption, 0x04) ? "on" : "off")
+	elseif a:id == 7
+		let menu = printf(" Encord:           %s", and(s:grOption, 0x08) ? "sijs" : "utf8")
+	else
+		let menu = ""
+	endif
+
+	setlocal modifiable
+	call setline(a:id, menu)
+	setlocal nomodifiable
 endfunction
 
 "-------------------------------------------------------
@@ -41,7 +68,11 @@ function! s:input_search_pattern() abort
 	let instr = input('Search for pattern: ')
 	echo "\r"
 	let s:grPattern = empty(instr) ? s:grPattern : instr
-	call s:redraw("MAIN")
+	if s:popup_mode
+		call s:create_popup('MAIN')
+	else
+		call s:redraw_part(1)
+	endif
 endfunction
 
 "-------------------------------------------------------
@@ -51,7 +82,11 @@ function! s:input_file_filter() abort
 	let instr = input('Search in files matching pattern: ')
 	echo "\r"
 	let s:grFilter = empty(instr) ? '*' : instr
-	call s:redraw("MAIN")
+	if s:popup_mode
+		call s:create_popup('MAIN')
+	else
+		call s:redraw_part(3)
+	endif
 endfunction
 
 "-------------------------------------------------------
@@ -87,8 +122,13 @@ endfunction
 "-------------------------------------------------------
 function! s:set_grep_option(opt) abort
 	let val = {'w':0x01, 'c':0x02, 'r':0x04, 'e':0x08}
+	let lno = {'w':4, 'c':5, 'r':6, 'e':7}
 	let s:grOption = xor(s:grOption, val[a:opt])
-	call s:redraw("MAIN")
+	if s:popup_mode
+		call s:create_popup('MAIN')
+	else
+		call s:redraw_part(lno[a:opt])
+	endif
 endfunction
 
 "-------------------------------------------------------
@@ -96,27 +136,17 @@ endfunction
 "-------------------------------------------------------
 function! s:make_grep_cmd_rg(search_pattern) abort
 	let opt = ''
-
-	" Search option
-	if and(s:grOption, 0x1)			"Word Search ?
-		let opt = opt.'w'
-	endif
-	if !and(s:grOption, 0x2)		"Case-senstive ?
-		let opt = opt.'i'
-	endif
-	if !and(s:grOption, 0x4)		"Disable Regular expressions?
-		let opt = opt.'F'
-	endif
+	"Word Search
+	let opt .= and(s:grOption, 0x1) ? 'w' : ''
+	"Case-senstive 	
+	let opt .= and(s:grOption, 0x2) ? 'i' : ''
+	"Disable Regular expressions
+	let opt .= and(s:grOption, 0x4) ? 'F' : ''
 	if strlen(opt)
 		let opt = '-'.opt
 	endif
-
-	" Encording
-	if and(s:grOption, 0x8)			"shift-jis ?
-		let opt = opt.' -E sjis'
-	else							"UTF-8
-		let opt = opt.' -E utf8'
-	endif
+	" Encording(sjis/utf-8)
+	let opt .= and(s:grOption, 0x8) ? ' -E sjis' : ' -E utf8'
 
 	let cmd = 'grep! '.opt.' -g *.{'.s:grFilter.'} "'.a:search_pattern. '" '.s:grStrDir[0]
 
@@ -146,24 +176,21 @@ endfunction
 " make_grep_cmd_vim()
 "-------------------------------------------------------
 function! s:make_grep_cmd_vim(search_pattern) abort
-	"Word Search
 	let opt = ''
-	if and(s:grOption, 0x1)			"Word Search ?
-		let opt = opt.'w'
-	endif
-	if and(s:grOption, 0x2) == 0	"Case-senstive ?
-		let opt = opt.'i'
-	endif
+	"Word Search
+	let opt .= and(s:grOption, 0x1) ? 'w' : ''
+	"Case-senstive 	
+	let opt .= and(s:grOption, 0x2) ? 'i' : ''
 
 	"Filter
-	let filter = ""
 	if stridx(s:grFilter, ',') >= 0
 		let filter = "--include={*.".substitute(s:grFilter, ",", ",*.", "g")."}"
 	elseif  s:grFilter!= '*'
 		let filter = "--include=*.".s:grFilter
 	endif
-	
+
 	let cmd = printf('grep! -r%s %s %s %s', opt, a:search_pattern, s:grStrDir[0], filter)
+
 	return cmd
 endfunction
 
@@ -218,18 +245,22 @@ endfunction
 "-------------------------------------------------------
 function! s:create_popup(mid) abort
 	let menu = s:make_menu(a:mid)
-	if a:mid == "MAIN"
-		let handler = "s:main_menu_selected_handler"
-	else
-		let handler = "s:dir_menu_selected_handler"
-	endif
+	let handler = a:mid == "MAIN" ?
+		\ "s:main_menu_selected_handler" :
+		\ "s:dir_menu_selected_handler"
 
-	call popup_menu(menu, #{
-			\ filter: 's:popup_menu_filter',
-			\ callback: handler,
-			\ border: [0,0,0,0],
-			\ padding: [1,1,1,1]
-			\ })
+    const winid = popup_create(menu, {
+            \ 'border': [1,1,1,1],
+	        \ 'borderchars': ['─', '│', '─', '│', '┌', '┐', '┘', '└'],
+            \ 'cursorline': 1,
+            \ 'wrap': v:false,
+            \ 'mapping': v:false,
+            \ 'title': ' gr ',
+            \ 'callback': handler,
+            \ 'filter': 's:popup_menu_filter',
+            \ 'filtermode': 'n'
+            \ })
+    call popup_filter_menu(winid,'k')
 
 	let s:current_mid = a:mid
 endfunction
@@ -342,17 +373,6 @@ endfunction
 " vim buffer menu Section
 "=======================================================
 "-------------------------------------------------------
-" parent_menu()
-"-------------------------------------------------------
-function! s:parent_menu()
-	if s:current_mid == 'MAIN'
-		close
-	else
-		call s:redraw("MAIN")
-	endif
-endfunction
-
-"-------------------------------------------------------
 " set_keymap()
 "-------------------------------------------------------
 function! s:set_keymap(mid) abort
@@ -361,18 +381,18 @@ function! s:set_keymap(mid) abort
 		nnoremap <buffer> <silent> l :call <SID>main_menu_selected_handler(0, line('.'))<CR>
 		nnoremap <buffer> <silent> g :call <SID>run_grep()<CR>
 		nnoremap <buffer> <silent> s :call <SID>input_search_pattern()<CR>
-		nnoremap <buffer> <silent> d :call <SID>redraw_floating_window("DIR")<CR>
+		nnoremap <buffer> <silent> d :call <SID>redraw_buffer("DIR")<CR>
 		nnoremap <buffer> <silent> f :call <SID>input_file_filter()<CR>
 		nnoremap <buffer> <silent> w :call <SID>set_grep_option('w')<CR>
 		nnoremap <buffer> <silent> c :call <SID>set_grep_option('c')<CR>
 		nnoremap <buffer> <silent> r :call <SID>set_grep_option('r')<CR>
 		nnoremap <buffer> <silent> e :call <SID>set_grep_option('e')<CR>
-		nnoremap <buffer> <silent> h :call <SID>parent_menu()<CR>
+		nnoremap <buffer> <silent> h :close<CR>
 		nnoremap <buffer> <silent> q :close<CR>
 
 	elseif a:mid == 'DIR'
-		nnoremap <buffer> <silent> <CR> :call <SID>dir_menu_selected_handler(line('.'))<CR>
-		nnoremap <buffer> <silent> l :call <SID>dir_menu_selected_handler(line('.'))<CR>
+		nnoremap <buffer> <silent> <CR> :call <SID>dir_menu_selected_handler(0, line('.'))<CR>
+		nnoremap <buffer> <silent> l :call <SID>dir_menu_selected_handler(0, line('.'))<CR>
 		nnoremap <buffer> <silent> g <nop>
 		nnoremap <buffer> <silent> s <nop>
 		nnoremap <buffer> <silent> d <nop>
@@ -380,6 +400,7 @@ function! s:set_keymap(mid) abort
 		nnoremap <buffer> <silent> w <nop>
 		nnoremap <buffer> <silent> c <nop>
 		nnoremap <buffer> <silent> r <nop>
+		nnoremap <buffer> <silent> h :call <SID>redraw_buffer("MAIN")<CR>
 		nnoremap <buffer> <silent> e :call <SID>input_start_dir(line('.'))<CR>
 	endif
 endfunction
@@ -459,8 +480,10 @@ function! s:create_buffer(mid) abort
 
 	execute 'syntax match gr "^.*\: "'
 	highlight link gr Directory
-"	highlight MyNormal guibg=#303030
-"	setlocal winhighlight=Normal:MyNormal
+	if has('nvim')
+		highlight MyNormal guibg=#101010
+		setlocal winhighlight=Normal:MyNormal
+	endif
 
 	setlocal nomodifiable
 
@@ -484,10 +507,8 @@ function! Gr#Gr(range, line1, line2) abort
 	let s:grFilter = g:GREPFLT
 	let s:grOption = g:GREPOPT
 
-	if has('nvim')
-		let s:redraw = function('s:redraw_buffer')
-		call s:create_buffer("MAIN")
-	elseif v:version >= 802
+	let s:popup_mode = !has('nvim') && v:version >= 802 ? 1 : 0
+	if s:popup_mode
 		let s:redraw = function('s:create_popup')
 		call s:create_popup("MAIN")
 	else
