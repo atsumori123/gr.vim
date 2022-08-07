@@ -93,7 +93,7 @@ endfunction
 " input_start_dir()
 "-------------------------------------------------------
 function! s:input_start_dir(idx) abort
-	let init_dir = a:idx ? s:grStrDir[a:idx - 1] : expand("%:p:h")
+	let init_dir = a:idx ? s:grStrDir[a:idx - 1] : s:current_dir
 	let dir = input('Start searching from directory: ', init_dir, 'dir')
 	echo "\r"
 	if empty(dir) | return 0 | endif
@@ -507,6 +507,7 @@ function! Gr#Gr(range, line1, line2) abort
 	let s:grFilter = g:GREPFLT
 	let s:grOption = g:GREPOPT
 
+	let s:current_dir = expand('%:p:h')
 	let s:popup_mode = !has('nvim') && v:version >= 802 ? 1 : 0
 	if s:popup_mode
 		let s:redraw = function('s:create_popup')
