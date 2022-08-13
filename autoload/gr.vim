@@ -211,6 +211,10 @@ function! s:run_grep() abort
 
 	" Close the QuickFix
 	cclose
+	let cnew_count = getqflist({'nr':'$'}).nr - getqflist({'nr':0}).nr
+	if cnew_count
+		execute printf('cnew %d', cnew_count)
+	endif
 
 	" escape meta character
 	let search_pattern = escape(s:grPattern, ' *?[{`$%#"|!<>();&' . "'\t\n")
