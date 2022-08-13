@@ -1,9 +1,6 @@
 let s:save_cpo = &cpoptions
 set cpoptions&vim
 
-"=======================================================
-" Common Section
-"=======================================================
 "-------------------------------------------------------
 " make_menu()
 "-------------------------------------------------------
@@ -35,44 +32,12 @@ function! s:make_menu(mid) abort
 endfunction
 
 "-------------------------------------------------------
-" redraw_part()
-"-------------------------------------------------------
-function! s:redraw_part(id) abort
-	if a:id == 1
-		let menu = " Search pattern:   ".s:grPattern
-	elseif a:id == 2
-		let menu = " Directory:        ".s:grStrDir[0]
-	elseif a:id == 3
-		let menu = " Filter:           ".s:grFilter
-	elseif a:id == 4
-		let menu = printf(" Word search:      %s", and(s:grOption, 0x01) ? "on" : "off")
-	elseif a:id == 5
-		let menu = printf(" Case-sensitive:   %s", and(s:grOption, 0x02) ? "on" : "off")
-	elseif a:id == 6
-		let menu = printf(" Regexp(.*foo):    %s", and(s:grOption, 0x04) ? "on" : "off")
-	elseif a:id == 7
-		let menu = printf(" Encord:           %s", and(s:grOption, 0x08) ? "sijs" : "utf8")
-	else
-		let menu = ""
-	endif
-
-	setlocal modifiable
-	call setline(a:id, menu)
-	setlocal nomodifiable
-endfunction
-
-"-------------------------------------------------------
 " input_search_pattern()
 "-------------------------------------------------------
 function! s:input_search_pattern() abort
 	let instr = input('Search for pattern: ')
 	echo "\r"
 	let s:grPattern = empty(instr) ? s:grPattern : instr
-	if s:popup_mode
-		call s:create_popup('MAIN')
-	else
-		call s:redraw_part(1)
-	endif
 endfunction
 
 "-------------------------------------------------------
@@ -82,18 +47,13 @@ function! s:input_file_filter() abort
 	let instr = input('Search in files matching pattern: ')
 	echo "\r"
 	let s:grFilter = empty(instr) ? '*' : instr
-	if s:popup_mode
-		call s:create_popup('MAIN')
-	else
-		call s:redraw_part(3)
-	endif
 endfunction
 
 "-------------------------------------------------------
 " input_start_dir()
 "-------------------------------------------------------
 function! s:input_start_dir(idx) abort
-	let init_dir = a:idx ? s:grStrDir[a:idx - 1] : s:current_dir
+	let init_dir = a:idx ? s:grStrDir[a:idx - 1] : expand('%:p:h')
 	let dir = input('Start searching from directory: ', init_dir, 'dir')
 	echo "\r"
 	if empty(dir) | return 0 | endif
@@ -109,11 +69,11 @@ function! s:input_start_dir(idx) abort
 		endfor
 		call remove(s:grStrDir, index)
 		call insert(s:grStrDir, temp, 0)
-		call s:redraw("MAIN")
+		call s:create_popup("MAIN")
 	else
 		echohl WarningMsg | echomsg 'Error: Directory ' . dir. " doesn't exist" | echohl None
 		sleep 1
-		call s:redraw("DIR")
+		call s:create_popup("DIR")
 	endif
 endfunction
 
@@ -124,11 +84,6 @@ function! s:set_grep_option(opt) abort
 	let val = {'w':0x01, 'c':0x02, 'r':0x04, 'e':0x08}
 	let lno = {'w':4, 'c':5, 'r':6, 'e':7}
 	let s:grOption = xor(s:grOption, val[a:opt])
-	if s:popup_mode
-		call s:create_popup('MAIN')
-	else
-		call s:redraw_part(lno[a:opt])
-	endif
 endfunction
 
 "-------------------------------------------------------
@@ -198,10 +153,6 @@ endfunction
 " run_grep()
 "-------------------------------------------------------
 function! s:run_grep() abort
-	if bufwinnr('-gr-') != -1
-		silent! close
-	endif
-
 	if empty(s:grPattern) | return 1 | endif
 
 	" Save search option, Filter and directory
@@ -211,6 +162,8 @@ function! s:run_grep() abort
 
 	" Close the QuickFix
 	cclose
+
+	" Move latest quickfix
 	let cnew_count = getqflist({'nr':'$'}).nr - getqflist({'nr':0}).nr
 	if cnew_count
 		execute printf('cnew %d', cnew_count)
@@ -241,9 +194,6 @@ function! s:run_grep() abort
 	endif
 endfunction
 
-"=======================================================
-" vim Popup menu Section
-"=======================================================
 "-------------------------------------------------------
 " create_popup()
 "-------------------------------------------------------
@@ -334,24 +284,30 @@ function! s:main_menu_selected_handler(winid, result) abort
 
 	elseif a:result == 1	 " Search pattern
 		call s:input_search_pattern()
+		call s:create_popup('MAIN')
 
 	elseif a:result == 2	 " Start searching from directory
-		call s:redraw("DIR")
+		call s:create_popup("DIR")
 
 	elseif a:result == 3	 " file filter
 		call s:input_file_filter()
+		call s:create_popup('MAIN')
 
 	elseif a:result == 4	 " Search option (Word Search)
 		call s:set_grep_option('w')
+		call s:create_popup('MAIN')
 
 	elseif a:result == 5	" Search option (Case-senstive)
 		call s:set_grep_option('c')
+		call s:create_popup('MAIN')
 
 	elseif a:result == 6	" Regular expressions
 		call s:set_grep_option('r')
+		call s:create_popup('MAIN')
 
 	elseif a:result == 7	" Encording
 		call s:set_grep_option('e')
+		call s:create_popup('MAIN')
 	endif
 endfunction
 
@@ -363,7 +319,7 @@ function! s:dir_menu_selected_handler(winid, result) abort
 		let temp = s:grStrDir[a:result - 1]
 		call remove(s:grStrDir, a:result - 1)
 		call insert(s:grStrDir, temp, 0)
-		call s:redraw("MAIN")
+		call s:create_popup("MAIN")
 
 	elseif a:result == 6
 		call s:input_start_dir(0)
@@ -371,127 +327,6 @@ function! s:dir_menu_selected_handler(winid, result) abort
 	elseif a:result >= 0x81 && a:result <= 0x85
 		call s:input_start_dir(and(a:result, 0x7F))
 	endif
-endfunction
-
-"=======================================================
-" vim buffer menu Section
-"=======================================================
-"-------------------------------------------------------
-" set_keymap()
-"-------------------------------------------------------
-function! s:set_keymap(mid) abort
-	if a:mid == 'MAIN'
-		nnoremap <buffer> <silent> <CR> :call <SID>main_menu_selected_handler(0, line('.'))<CR>
-		nnoremap <buffer> <silent> l :call <SID>main_menu_selected_handler(0, line('.'))<CR>
-		nnoremap <buffer> <silent> g :call <SID>run_grep()<CR>
-		nnoremap <buffer> <silent> s :call <SID>input_search_pattern()<CR>
-		nnoremap <buffer> <silent> d :call <SID>redraw_buffer("DIR")<CR>
-		nnoremap <buffer> <silent> f :call <SID>input_file_filter()<CR>
-		nnoremap <buffer> <silent> w :call <SID>set_grep_option('w')<CR>
-		nnoremap <buffer> <silent> c :call <SID>set_grep_option('c')<CR>
-		nnoremap <buffer> <silent> r :call <SID>set_grep_option('r')<CR>
-		nnoremap <buffer> <silent> e :call <SID>set_grep_option('e')<CR>
-		nnoremap <buffer> <silent> h :close<CR>
-		nnoremap <buffer> <silent> q :close<CR>
-
-	elseif a:mid == 'DIR'
-		nnoremap <buffer> <silent> <CR> :call <SID>dir_menu_selected_handler(0, line('.'))<CR>
-		nnoremap <buffer> <silent> l :call <SID>dir_menu_selected_handler(0, line('.'))<CR>
-		nnoremap <buffer> <silent> g <nop>
-		nnoremap <buffer> <silent> s <nop>
-		nnoremap <buffer> <silent> d <nop>
-		nnoremap <buffer> <silent> f <nop>
-		nnoremap <buffer> <silent> w <nop>
-		nnoremap <buffer> <silent> c <nop>
-		nnoremap <buffer> <silent> r <nop>
-		nnoremap <buffer> <silent> h :call <SID>redraw_buffer("MAIN")<CR>
-		nnoremap <buffer> <silent> e :call <SID>input_start_dir(line('.'))<CR>
-	endif
-endfunction
-
-"-------------------------------------------------------
-" redraw_buffer()
-"-------------------------------------------------------
-function! s:redraw_buffer(mid) abort
-	let menu = s:make_menu(a:mid)
-
-	execute "resize ".len(menu)
-	setlocal modifiable
-	silent! %delete _
-	silent! 0put = menu
-	silent! $delete _
-	normal! gg
-	if s:current_mid != a:mid
-		call s:set_keymap(a:mid)
-	endif
-	setlocal nomodifiable
-
-	let s:current_mid = a:mid
-endfunction
-
-"-------------------------------------------------------
-" s:create_buffer()
-"-------------------------------------------------------
-function! s:create_buffer(mid) abort
-	let menu = s:make_menu(a:mid)
-
-	let winnum = bufwinnr('-gr-')
-	if winnum != -1
-		" Already in the window, jump to it
-		exe winnum.'wincmd w'
-	else
-		" Open a new floating window
-		if has('nvim')
-			let win_id = nvim_open_win(bufnr('%'), v:true, {
-				\   'width': 70,
-				\   'height': len(menu),
-				\   'relative': 'cursor',
-				\   'anchor': "NW",
-				\   'row': 1,
-				\   'col': 0,
-				\   'external': v:false,
-				\})
-			enew
-			file `= '-gr-'`
-		else
-			exe 'silent! botright '.len(menu).'split -gr-'
-		    setlocal winfixheight winfixwidth
-		endif
-	endif
-
-	setlocal modifiable
-	silent! %delete _
-
-	setlocal buftype=nofile
-	setlocal bufhidden=delete
-	setlocal noswapfile
-	setlocal nobuflisted
-	setlocal nowrap
-	setlocal nonumber
-	setlocal filetype=gr
-
-	call s:set_keymap(a:mid)
-
-	" Put to buffer
-	silent! 0put = menu
-
-	" Delete the empty line at the end of the buffer
-	silent! $delete _
-
-	" Move the cursor to the beginning of the file
-	normal! gg
-	normal! h
-
-	execute 'syntax match gr "^.*\: "'
-	highlight link gr Directory
-	if has('nvim')
-		highlight MyNormal guibg=#101010
-		setlocal winhighlight=Normal:MyNormal
-	endif
-
-	setlocal nomodifiable
-
-	let s:current_mid = a:mid
 endfunction
 
 "-------------------------------------------------------
@@ -511,15 +346,7 @@ function! Gr#Gr(range, line1, line2) abort
 	let s:grFilter = g:GREPFLT
 	let s:grOption = g:GREPOPT
 
-	let s:current_dir = expand('%:p:h')
-	let s:popup_mode = !has('nvim') && v:version >= 802 ? 1 : 0
-	if s:popup_mode
-		let s:redraw = function('s:create_popup')
-		call s:create_popup("MAIN")
-	else
-		let s:redraw = function('s:redraw_buffer')
-		call s:create_buffer("MAIN")
-	endif
+	call s:create_popup("MAIN")
 endfunction
 
 let &cpoptions = s:save_cpo
