@@ -55,7 +55,11 @@ endfunction
 "-------------------------------------------------------
 function! s:input_start_dir(idx) abort
 	let dir = input('Start searching from directory: ', s:GR.start_dir[a:idx - 1], 'dir')
+	if dir == "."
+		let dir = input('Start searching from directory: ', expand('%:p:h'), 'dir')
+	endif
 	echo "\r"
+
 	if empty(dir) | return 0 | endif
 
 	if isdirectory(dir)
