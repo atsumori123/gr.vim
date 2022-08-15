@@ -200,7 +200,7 @@ function! s:create_popup(mid) abort
             \ 'mapping': v:false,
             \ 'title': ' gr ',
             \ 'callback': handler,
-            \ 'filter': 's:popup_menu_filter',
+            \ 'filter': 'Gr_popup_menu_filter',
             \ 'filtermode': 'n'
             \ })
     call popup_filter_menu(winid,'k')
@@ -209,9 +209,9 @@ function! s:create_popup(mid) abort
 endfunction
 
 "-------------------------------------------------------
-" popup_menu_filter()
+" Gr_popup_menu_filter()
 "-------------------------------------------------------
-function! s:popup_menu_filter(winid, key) abort
+function! Gr_popup_menu_filter(winid, key) abort
 	" ---------------------------
 	"  When pressed 'l' key
 	" ---------------------------
@@ -319,7 +319,7 @@ endfunction
 "-------------------------------------------------------
 " Gr()
 "-------------------------------------------------------
-function! Gr#Gr(range, line1, line2) abort
+function! gr#Gr(range, line1, line2) abort
 	let s:GR = g:GR
 	if a:range
 		let temp = @@
