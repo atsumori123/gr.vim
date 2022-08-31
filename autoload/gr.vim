@@ -187,6 +187,8 @@ function! s:make_grep_cmd_vim(search_pattern) abort
 		let filter = "--include={*.".substitute(s:grFilter, ",", ",*.", "g")."}"
 	elseif  s:grFilter!= '*'
 		let filter = "--include=*.".s:grFilter
+	else
+		let filter = ""
 	endif
 
 	let cmd = printf('grep! -r%s %s %s %s', opt, a:search_pattern, s:grStrDir[0], filter)
