@@ -105,9 +105,9 @@ function! s:make_grep_cmd_rg() abort
 endfunction
 
 "-------------------------------------------------------
-" make_grep_cmd_grep()
+" make_grep_cmd_vim()
 "-------------------------------------------------------
-function! s:make_grep_cmd_grep() abort
+function! s:make_grep_cmd_vim() abort
 	let cmd = 'vimgrep! '
 	"Word Search
 	let cmd .= and(s:GR.option, 0x1) ? '/\<'.s:GR.search_pattern : '/'.s:GR.search_pattern
@@ -124,9 +124,9 @@ function! s:make_grep_cmd_grep() abort
 endfunction
 
 "-------------------------------------------------------
-" make_grep_cmd_vim()
+" make_grep_cmd_grep()
 "-------------------------------------------------------
-function! s:make_grep_cmd_vim() abort
+function! s:make_grep_cmd_grep() abort
 	let opt = ''
 	"Word Search
 	let opt .= and(s:GR.option, 0x1) ? 'w' : ''
