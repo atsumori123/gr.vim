@@ -38,7 +38,7 @@ function! s:input_search_pattern() abort
 	echo "\r"
 	let s:GR.search_pattern = empty(instr) ?
 			\ s:GR.search_pattern :
-   			\ escape(instr, ' *?[{`$%#"|!<>();&' . "'\t\n")
+   			\ escape(instr, '^$.*[]/~\')
 endfunction
 
 "-------------------------------------------------------
@@ -89,7 +89,7 @@ function! s:make_grep_cmd_rg() abort
 	let opt = ''
 	"Word Search
 	let opt .= and(s:GR.option, 0x1) ? 'w' : ''
-	"Case-senstive 	
+	"Case-senstive
 	let opt .= and(s:GR.option, 0x2) ? 'i' : ''
 	"Disable Regular expressions
 	let opt .= and(s:GR.option, 0x4) ? 'F' : ''
@@ -111,14 +111,14 @@ function! s:make_grep_cmd_vim() abort
 	let cmd = 'vimgrep! '
 	"Word Search
 	let cmd .= and(s:GR.option, 0x1) ? '/\<'.s:GR.search_pattern : '/'.s:GR.search_pattern
-	"Case-senstive	
+	"Case-senstive
 	let cmd .= and(s:GR.option, 0x2) ? '\C' : '\c'
 	"Word Search
 	let cmd .= and(s:GR.option, 0x1) ? '\>/j ' : '/j '
 	"Start search directory
 	let cmd .= s:GR.start_dir[0]
 	"File filter
-	let cmd .= '/**/*.'.substitute(s:GR.filter, ",", " **/*.", "g") 
+	let cmd .= '/**/*.'.substitute(s:GR.filter, ",", " **/*.", "g")
 
 	return cmd
 endfunction
@@ -130,7 +130,7 @@ function! s:make_grep_cmd_grep() abort
 	let opt = ''
 	"Word Search
 	let opt .= and(s:GR.option, 0x1) ? 'w' : ''
-	"Case-senstive 	
+	"Case-senstive
 	let opt .= and(s:GR.option, 0x2) ? 'i' : ''
 
 	"Filter
@@ -173,7 +173,7 @@ function! s:run_grep() abort
 	endif
 	silent! execute cmd
 
-	" If there is a hit as a result of the search, display the QuickFix and set it to be rewritable. 
+	" If there is a hit as a result of the search, display the QuickFix and set it to be rewritable.
 	if len(getqflist())
 		exe 'botright copen'
 		redraw!
@@ -223,7 +223,7 @@ function! Gr_popup_menu_filter(winid, key) abort
 		call popup_close(a:winid, index)
 		return 1
 	endif
-	
+
 	" ---------------------------
 	"  When pressed 'q' key
 	" ---------------------------
@@ -331,7 +331,7 @@ function! gr#Gr(range, line1, line2) abort
 	else
 		let search_pattern = expand('<cword>')
 	endif
-	let s:GR.search_pattern = escape(search_pattern, ' *?[{`$%#"|!<>();&' . "'\t\n")
+	let s:GR.search_pattern = escape(search_pattern, '^$.*[]/~\')
 
 	call s:create_popup("MAIN")
 endfunction
