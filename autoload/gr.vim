@@ -22,9 +22,9 @@ function! s:make_menu(mid) abort
 		endif
 
 	elseif a:mid == 'DIR'
-		let menu = copy(s:GR.start_dir)
-		call map(menu, '" ".v:val')
-		let s:short_cut_key = ''
+		let s:short_cut_key = 'c'
+		let menu = map(copy(s:GR.start_dir), '" ".v:val')
+		call insert(menu, " [ current directory ]", 0)
 	endif
 
 	return menu
@@ -53,18 +53,20 @@ endfunction
 "-------------------------------------------------------
 " input_start_dir()
 "-------------------------------------------------------
-function! s:input_start_dir(idx) abort
-	let dir = input('Start searching from directory: ', s:GR.start_dir[a:idx - 1], 'dir')
-	if dir == "."
+function! s:input_start_dir(mode, idx) abort
+	if a:mode == "current"
 		let dir = input('Start searching from directory: ', expand('%:p:h'), 'dir')
+	else
+		let dir = input('Start searching from directory: ', s:GR.start_dir[a:idx], 'dir')
 	endif
 	echo "\r"
 
 	if empty(dir) | return 0 | endif
+	let dir = trim(dir, has('unix') ? '/' : '\')
 
 	if isdirectory(dir)
 		let temp = fnamemodify(dir, ':p:h')
-		call remove(s:GR.start_dir, a:idx - 1)
+		call remove(s:GR.start_dir, a:idx)
 		call insert(s:GR.start_dir, temp, 0)
 		return 1
 	else
@@ -228,7 +230,7 @@ function! Gr_popup_menu_filter(winid, key) abort
 	"  When pressed 'q' key
 	" ---------------------------
 	if a:key == 'q'
-		call popup_close(a:winid, 99)
+		call popup_close(a:winid, -1)
 		return 1
 	endif
 
@@ -245,7 +247,7 @@ function! Gr_popup_menu_filter(winid, key) abort
 	"  press 'g' at MAIN
 	" ---------------------------
 	if a:key == 'g' && s:current_mid == "MAIN"
-		call popup_close(a:winid, 0x80)
+		call popup_close(a:winid, 0x8000)
 		return 1
 	endif
 
@@ -270,7 +272,7 @@ endfunction
 " main_menu_selected_handler()
 "-------------------------------------------------------
 function! s:main_menu_selected_handler(winid, result) abort
-	if a:result == 0x80		 " Run grep
+	if a:result == 0x8000	 " Run grep
 		call s:run_grep()
 
 	elseif a:result == 1	 " Search pattern
@@ -306,15 +308,23 @@ endfunction
 " dir_menu_selected_handler()
 "-------------------------------------------------------
 function! s:dir_menu_selected_handler(winid, result) abort
-	if a:result >= 1 && a:result <= 5
-		let temp = s:GR.start_dir[a:result - 1]
-		call remove(s:GR.start_dir, a:result - 1)
+	echo a:result
+	if a:result == 1
+		let ret = s:input_start_dir("current", 0)
+		call s:create_popup(ret ? "MAIN" : "DIR")
+
+	elseif a:result >= 2 && a:result <= 6
+		let temp = s:GR.start_dir[a:result - 2]
+		call remove(s:GR.start_dir, a:result - 2)
 		call insert(s:GR.start_dir, temp, 0)
 		call s:create_popup("MAIN")
 
-	elseif a:result >= 0x81 && a:result <= 0x85
-		let ret = s:input_start_dir(and(a:result, 0x7F))
+	elseif a:result >= 0x82 && a:result <= 0x86
+		let ret = s:input_start_dir("edit", and(a:result, 0x7F) - 2)
 		call s:create_popup(ret ? "MAIN" : "DIR")
+
+	elseif a:result == -1
+		call s:create_popup("MAIN")
 	endif
 endfunction
 
