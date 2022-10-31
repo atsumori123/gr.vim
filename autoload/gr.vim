@@ -8,16 +8,16 @@ function! s:make_menu(mid) abort
 	let menu = []
 
 	if a:mid == 'MAIN'
-		call add(menu, " Search pattern:   ".s:GR.search_pattern)
-		call add(menu, " Directory:        ".s:GR.start_dir[0])
-		call add(menu, " Filter:           ".s:GR.filter)
-		call add(menu, printf(" Word search:      %s", and(s:GR.option, 0x01) ? "on" : "off"))
-		call add(menu, printf(" Case-sensitive:   %s", and(s:GR.option, 0x02) ? "on" : "off"))
+		call add(menu, " Search pattern    ".s:GR.search_pattern)
+		call add(menu, " Directory         ".s:GR.start_dir[0])
+		call add(menu, " Filter            ".s:GR.filter)
+		call add(menu, printf(" Word search       %s", and(s:GR.option, 0x01) ? "on" : "off"))
+		call add(menu, printf(" Case-sensitive    %s", and(s:GR.option, 0x02) ? "on" : "off"))
 		let s:short_cut_key = 'sdfwc'
 
-		if g:Gr_Grep_Proc == 'rg'
-			call add(menu, printf(" Regexp(.*foo):    %s", and(s:GR.option, 0x04) ? "on" : "off"))
-			call add(menu, printf(" Encord:           %s", and(s:GR.option, 0x08) ? "sijs" : "utf8"))
+		if g:Gr_Grep_Proc == 'ripgrep'
+			call add(menu, printf(" Regexp(.*foo)     %s", and(s:GR.option, 0x04) ? "on" : "off"))
+			call add(menu, printf(" Encord            %s", and(s:GR.option, 0x08) ? "sijs" : "utf8"))
 			let s:short_cut_key .= 're'
 		endif
 
@@ -166,7 +166,7 @@ function! s:run_grep() abort
 	endif
 
 	" Run grep
-	if g:Gr_Grep_Proc == 'rg'
+	if g:Gr_Grep_Proc == 'ripgrep'
 		let cmd = s:make_grep_cmd_rg()
 	elseif g:Gr_Grep_Proc == 'grep'
 		let cmd = s:make_grep_cmd_grep()
@@ -202,7 +202,7 @@ function! s:create_popup(mid) abort
             \ 'cursorline': 1,
             \ 'wrap': v:false,
             \ 'mapping': v:false,
-            \ 'title': ' gr ',
+            \ 'title': ' '.g:Gr_Grep_Proc.' ',
             \ 'callback': handler,
             \ 'filter': 'Gr_popup_menu_filter',
             \ 'filtermode': 'n'
