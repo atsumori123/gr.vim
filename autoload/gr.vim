@@ -316,7 +316,6 @@ endfunction
 " dir_menu_selected_handler()
 "-------------------------------------------------------
 function! s:dir_menu_selected_handler(winid, result) abort
-	echo a:result
 	if a:result == 1
 		let ret = s:input_start_dir("current", 0)
 		call s:create_popup(ret ? "MAIN" : "DIR")
