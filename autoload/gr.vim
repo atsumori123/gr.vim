@@ -17,7 +17,7 @@ function! s:make_menu(mid) abort
 
 		if g:Gr_Grep_Proc == 'ripgrep'
 			call add(menu, printf(" Regexp(.*foo)     %s", and(s:GR.option, 0x04) ? "on" : "off"))
-			call add(menu, printf(" Encord            %s", and(s:GR.option, 0x08) ? "sijs" : "utf8"))
+			call add(menu, printf(" Encording         %s", and(s:GR.option, 0x08) ? "sijs" : "utf8"))
 			let s:short_cut_key .= 're'
 		endif
 
@@ -156,7 +156,7 @@ function! s:run_grep() abort
 	if empty(s:GR.search_pattern) | return 1 | endif
 
 	" Save search option, Filter and directory
-	let g:GR = s:GR
+	let g:GR = copy(s:GR)
 
 	" Close the QuickFix. and Move latest quickfix
 	cclose
@@ -227,10 +227,18 @@ function! Gr_popup_menu_filter(winid, key) abort
 	endif
 
 	" ---------------------------
+	"  When pressed 'h' key
+	" ---------------------------
+	if a:key == 'h' && s:current_mid == "DIR"
+		call popup_close(a:winid, -10)
+		return 1
+	endif
+
+	" ---------------------------
 	"  When pressed 'q' key
 	" ---------------------------
 	if a:key == 'q'
-		call popup_close(a:winid, -1)
+		call popup_close(a:winid, -11)
 		return 1
 	endif
 
@@ -323,7 +331,7 @@ function! s:dir_menu_selected_handler(winid, result) abort
 		let ret = s:input_start_dir("edit", and(a:result, 0x7F) - 2)
 		call s:create_popup(ret ? "MAIN" : "DIR")
 
-	elseif a:result == -1
+	elseif a:result == -10
 		call s:create_popup("MAIN")
 	endif
 endfunction
@@ -332,7 +340,7 @@ endfunction
 " Gr()
 "-------------------------------------------------------
 function! gr#Gr(range, line1, line2) abort
-	let s:GR = g:GR
+	let s:GR = copy(g:GR)
 	if a:range
 		let temp = @@
 		silent normal gvy
