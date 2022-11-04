@@ -66,7 +66,7 @@ function! s:input_start_dir(mode, idx) abort
 
 	if isdirectory(dir)
 		let temp = fnamemodify(dir, ':p:h')
-		call remove(s:GR.start_dir, a:idx)
+		call remove(s:GR.start_dir, index(s:GR.start_dir, temp))
 		call insert(s:GR.start_dir, temp, 0)
 		return 1
 	else
