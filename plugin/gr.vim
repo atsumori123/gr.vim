@@ -17,11 +17,11 @@ endif
 " Grep type
 if !exists('g:Gr_Grep_Proc')
 	let g:Gr_Grep_Proc = 'vimgrep'
-endif
-
-if executable('rg') && g:Gr_Grep_Proc == 'ripgrep'
+elseif g:Gr_Grep_Proc == 'ripgrep'&& executable('rg')
 	let &grepprg = 'rg --vimgrep --hidden'
 	set grepformat=%f:%l:%c:%m
+elseif g:Gr_Grep_Proc != 'grep' && g:Gr_Grep_Proc != 'vimgrep'
+	let g:Gr_Grep_Proc = 'vimgrep'
 endif
 
 command! -nargs=0 -range Gr call gr#Gr(<range>, <line1>, <line2>)
