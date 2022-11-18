@@ -62,7 +62,7 @@ function! s:input_start_dir(mode, idx) abort
 	echo "\r"
 
 	if empty(dir) | return 0 | endif
-	let dir = trim(dir, has('unix') ? '/' : '\')
+	let dir = substitute(dir, has('unix') ? "/$" : "\$", "", "")
 
 	if isdirectory(dir)
 		let temp = fnamemodify(dir, ':p:h')
