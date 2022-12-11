@@ -50,6 +50,11 @@ function! s:draw_line(id) abort
 	endif
 
 	setlocal modifiable
+	if has('nvim')
+		call nvim_win_set_config(s:win_id, {
+			\	'width': s:get_buffer_width(),
+			\	})
+	endif
 	call setline(a:id, menu)
 	setlocal nomodifiable
 endfunction
@@ -265,9 +270,6 @@ function! s:dir_menu_selected_handler(winid, result) abort
 	elseif a:result >= 0x82 && a:result <= 0x86
 		let ret = s:input_start_dir("edit", and(a:result, 0x7F) - 2)
 		call s:draw_buffer(ret ? "MAIN" : "DIR")
-
-	elseif a:result == -10
-		call s:create_popup("MAIN")
 	endif
 endfunction
 
@@ -289,6 +291,7 @@ function! s:set_keymap(mid) abort
 		nnoremap <buffer> <silent> c :call <SID>set_grep_option('c')<CR>
 		nnoremap <buffer> <silent> r :call <SID>set_grep_option('r')<CR>
 		nnoremap <buffer> <silent> e :call <SID>set_grep_option('e')<CR>
+		nnoremap <buffer> <silent> <ESC> :close<CR>
 		nnoremap <buffer> <silent> h :close<CR>
 		nnoremap <buffer> <silent> q :close<CR>
 
@@ -308,6 +311,20 @@ function! s:set_keymap(mid) abort
 endfunction
 
 "-------------------------------------------------------
+" get_buffer_width()
+"-------------------------------------------------------
+function! s:get_buffer_width() abort
+	if !has('nvim') | return | endif
+
+	let width = len(s:GR.search_pattern) > len(s:GR.start_dir[0])
+				\ ? len(s:GR.search_pattern)
+				\ : len(s:GR.start_dir[0])
+	let width += 20
+
+	return width
+endfunction
+
+"-------------------------------------------------------
 " draw_buffer()
 "-------------------------------------------------------
 function! s:draw_buffer(mid) abort
@@ -322,6 +339,13 @@ function! s:draw_buffer(mid) abort
 	if s:current_mid != a:mid
 		call s:set_keymap(a:mid)
 	endif
+
+	if has('nvim')
+		call nvim_win_set_config(s:win_id, {
+			\	'width': s:get_buffer_width(),
+			\	})
+	endif
+
 	setlocal nomodifiable
 
 	let s:current_mid = a:mid
@@ -340,8 +364,8 @@ function! s:create_buffer(mid) abort
 	else
 		" Open a new floating window
 		if has('nvim')
-			let win_id = nvim_open_win(bufnr('%'), v:true, {
-				\   'width': 70,
+			let s:win_id = nvim_open_win(bufnr('%'), v:true, {
+				\   'width': s:get_buffer_width(),
 				\   'height': len(menu),
 				\   'relative': 'cursor',
 				\   'anchor': "NW",
@@ -383,7 +407,7 @@ function! s:create_buffer(mid) abort
 	execute 'syntax match gr "^.*\: "'
 	highlight link gr Directory
 	if has('nvim')
-		highlight MyNormal guibg=#202020
+		highlight MyNormal guibg=#404040
 		setlocal winhighlight=Normal:MyNormal
 	endif
 
