@@ -226,7 +226,7 @@ endfunction
 "-------------------------------------------------------
 " main_menu_selected_handler()
 "-------------------------------------------------------
-function! s:main_menu_selected_handler(winid, result) abort
+function! s:main_menu_selected_handler(result) abort
 	if a:result == 0x8000	 " Run grep
 		call s:run_grep()
 
@@ -256,7 +256,7 @@ endfunction
 "-------------------------------------------------------
 " dir_menu_selected_handler()
 "-------------------------------------------------------
-function! s:dir_menu_selected_handler(winid, result) abort
+function! s:dir_menu_selected_handler(result) abort
 	if a:result == 1
 		let ret = s:input_start_dir("current", 0)
 		call s:draw_buffer(ret ? "MAIN" : "DIR")
@@ -281,8 +281,8 @@ endfunction
 "-------------------------------------------------------
 function! s:set_keymap(mid) abort
 	if a:mid == 'MAIN'
-		nnoremap <buffer> <silent> <CR> :call <SID>main_menu_selected_handler(0, line('.'))<CR>
-		nnoremap <buffer> <silent> l :call <SID>main_menu_selected_handler(0, line('.'))<CR>
+		nnoremap <buffer> <silent> <CR> :call <SID>main_menu_selected_handler(line('.'))<CR>
+		nnoremap <buffer> <silent> l :call <SID>main_menu_selected_handler(line('.'))<CR>
 		nnoremap <buffer> <silent> g :call <SID>run_grep()<CR>
 		nnoremap <buffer> <silent> s :call <SID>input_search_pattern()<CR>
 		nnoremap <buffer> <silent> d :call <SID>draw_buffer("DIR")<CR>
@@ -296,8 +296,8 @@ function! s:set_keymap(mid) abort
 		nnoremap <buffer> <silent> q :close<CR>
 
 	elseif a:mid == 'DIR'
-		nnoremap <buffer> <silent> <CR> :call <SID>dir_menu_selected_handler(0, line('.'))<CR>
-		nnoremap <buffer> <silent> l :call <SID>dir_menu_selected_handler(0, line('.'))<CR>
+		nnoremap <buffer> <silent> <CR> :call <SID>dir_menu_selected_handler(line('.'))<CR>
+		nnoremap <buffer> <silent> l :call <SID>dir_menu_selected_handler(line('.'))<CR>
 		nnoremap <buffer> <silent> g <nop>
 		nnoremap <buffer> <silent> s <nop>
 		nnoremap <buffer> <silent> d <nop>
@@ -306,7 +306,7 @@ function! s:set_keymap(mid) abort
 		nnoremap <buffer> <silent> c <nop>
 		nnoremap <buffer> <silent> r <nop>
 		nnoremap <buffer> <silent> h :call <SID>draw_buffer("MAIN")<CR>
-		nnoremap <buffer> <silent> e :call <SID>input_start_dir(line('.'))<CR>
+		nnoremap <buffer> <silent> e :call <SID>dir_menu_selected_handler(or(line('.'), 0x80))<CR>
 	endif
 endfunction
 
@@ -407,7 +407,7 @@ function! s:create_buffer(mid) abort
 	execute 'syntax match gr "^.*\: "'
 	highlight link gr Directory
 	if has('nvim')
-		highlight MyNormal guibg=#404040
+		highlight MyNormal guibg=#202020
 		setlocal winhighlight=Normal:MyNormal
 	endif
 
