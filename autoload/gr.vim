@@ -30,6 +30,15 @@ function! s:make_menu(mid) abort
 endfunction
 
 "-------------------------------------------------------
+" get_relative_path()
+"-------------------------------------------------------
+function! s:get_relative_path(absolute_path) abort
+        let base = getcwd()
+        let relative_path = substitute(a:absolute_path, base, ".", "")
+	return relative_path
+endfunction
+
+"-------------------------------------------------------
 " input_search_pattern()
 "-------------------------------------------------------
 function! s:input_search_pattern() abort
@@ -93,7 +102,7 @@ function! s:make_grep_cmd_rg() abort
 	" Encording(sjis/utf-8)
 	let opt .= and(s:GR.option, 0x8) ? ' -E sjis' : ' -E utf8'
 
-	let cmd = 'grep! '.opt.' -g *.{'.s:GR.filter.'} "'.s:GR.search_pattern. '" '.s:GR.start_dir[0]
+	let cmd = 'grep! '.opt.' -g *.{'.s:GR.filter.'} "'.s:GR.search_pattern. '" '.s:get_relative_path(s:GR.start_dir[0])
 
 	return cmd
 endfunction
@@ -110,7 +119,7 @@ function! s:make_grep_cmd_vim() abort
 	"Word Search
 	let cmd .= and(s:GR.option, 0x1) ? '\>/j ' : '/j '
 	"Start search directory
-	let cmd .= s:GR.start_dir[0]
+	let cmd .= s:get_relative_path(s:GR.start_dir[0])
 	"File filter
 	let cmd .= '/**/*.'.substitute(s:GR.filter, ",", " **/*.", "g")
 
@@ -136,7 +145,7 @@ function! s:make_grep_cmd_grep() abort
 		let filter = ""
 	endif
 
-	let cmd = printf('grep! -r%s "%s" %s %s', opt, s:GR.search_pattern, s:GR.start_dir[0], filter)
+	let cmd = printf('grep! -r%s "%s" %s %s', opt, s:GR.search_pattern, s:get_relative_path(s:GR.start_dir[0]), filter)
 
 	return cmd
 endfunction
