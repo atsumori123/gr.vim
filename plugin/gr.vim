@@ -19,7 +19,6 @@ if !exists('g:Gr_Grep_Proc')
 	let g:Gr_Grep_Proc = 'vimgrep'
 elseif g:Gr_Grep_Proc == 'ripgrep'&& executable('rg')
 	let &grepprg = 'rg --vimgrep --hidden'
-	set grepformat=%f:%l:%c:%m
 elseif g:Gr_Grep_Proc != 'grep' && g:Gr_Grep_Proc != 'vimgrep'
 	let g:Gr_Grep_Proc = 'vimgrep'
 endif
