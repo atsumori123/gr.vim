@@ -32,10 +32,26 @@ endfunction
 "-------------------------------------------------------
 " get_relative_path()
 "-------------------------------------------------------
-function! s:get_relative_path(absolute_path) abort
-        let base = getcwd()
-        let relative_path = substitute(a:absolute_path, base, ".", "")
-	return relative_path
+function! s:get_relative_path(absolute_dir) abort
+	let base_dir = getcwd()
+	if base_dir == a:absolute_dir | return "." | endif
+
+	let sep = has('win32') ? '\' : '/'
+	let b = split(base_dir, sep)
+	let a = split(a:absolute_dir, sep)
+
+	while !empty(b) && !empty(a) && b[0] ==# a[0]
+		unlet b[0]
+		unlet a[0]
+	endwhile
+
+	let relative_dir = repeat("..".sep, len(b))
+	if empty(a)
+		let relative_dir = relative_dir[:-2]
+	else
+		let relative_dir .= join(a, sep)
+	endif
+	return relative_dir
 endfunction
 
 "-------------------------------------------------------
