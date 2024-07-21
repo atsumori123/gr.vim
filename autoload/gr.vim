@@ -2,367 +2,335 @@ let s:save_cpo = &cpoptions
 set cpoptions&vim
 
 "-------------------------------------------------------
-" make_menu()
+" refresh
 "-------------------------------------------------------
-function! s:make_menu(mid) abort
-	let menu = []
+function! s:refresh() abort
+	let pos = getpos('.')
+	call s:make_menu()
+	setlocal modifiable
 
-	if a:mid == 'MAIN'
-		call add(menu, " Search pattern    : ".s:GR.search_pattern)
-		call add(menu, " Directory         : ".s:GR.start_dir[0])
-		call add(menu, " Filter            : ".s:GR.filter)
-		call add(menu, printf(" Word search       : %s", and(s:GR.option, 0x01) ? "on" : "off"))
-		call add(menu, printf(" Case-sensitive    : %s", and(s:GR.option, 0x02) ? "on" : "off"))
-		let s:short_cut_key = 'sdfwc'
+	silent! %delete _
+	silent! 0put = s:menu
+	silent! $delete _
+	normal! gg
 
-		if g:Gr_Grep_Proc == 'ripgrep'
-			call add(menu, printf(" Regexp(.*foo)     : %s", and(s:GR.option, 0x04) ? "on" : "off"))
-			call add(menu, printf(" Encording         : %s", and(s:GR.option, 0x08) ? "sijs" : "utf8"))
-			let s:short_cut_key .= 're'
-		endif
-
-	elseif a:mid == 'DIR'
-		let s:short_cut_key = 'c'
-		let menu = map(copy(s:GR.start_dir), '" ".v:val')
-	endif
-
-	return menu
+	setlocal nomodifiable
+	call setpos('.', pos)
 endfunction
 
 "-------------------------------------------------------
-" input_search_pattern()
+" make_menu()
+"-------------------------------------------------------
+function! s:make_menu() abort
+	let s:menu = []
+
+	call add(s:menu, " Search Word  : '".s:search_pattern."' ")
+	call add(s:menu, " Directory[".s:dirNo."] : ".s:gr["DIR"][s:dirNo])
+
+	let str  = " Option       :"
+	let str .= " Filetype=".s:gr["FILTER"]
+	let str .= "  Word=".(and(s:gr["OPT"], 0x01) ? "*" : "-")
+	let str .= "  Case=".(and(s:gr["OPT"], 0x02) ? "*" : "-")
+
+	if g:Gr_Grep_Proc == 'rg'
+		let str .= "  RegEx=".(and(s:gr["OPT"], 0x04) ? "*" : "-")
+		let str .= "  Encord=".(and(s:gr["OPT"], 0x08) ? "sjis" : "utf8")
+	endif
+	call add(s:menu, str)
+endfunction
+
+"-------------------------------------------------------
+" input_search_patter
 "-------------------------------------------------------
 function! s:input_search_pattern() abort
 	let instr = input('Search for pattern: ')
 	echo "\r"
-	let s:GR.search_pattern = empty(instr) ?
-			\ s:GR.search_pattern :
-   			\ escape(instr, '^$.*[]/~\')
+	let s:search_pattern = empty(instr) ? s:search_pattern : instr
+	call s:refresh()
 endfunction
 
 "-------------------------------------------------------
-" input_file_filter()
+" input_file_filter
 "-------------------------------------------------------
 function! s:input_file_filter() abort
 	let instr = input('Search in files matching pattern: ')
 	echo "\r"
-	let s:GR.filter = empty(instr) ? '*' : instr
+	let s:gr["FILTER"] = empty(instr) ? '*' : instr
+	call s:refresh()
 endfunction
 
 "-------------------------------------------------------
-" input_start_dir()
+" toggle_grep_option
 "-------------------------------------------------------
-function! s:input_start_dir(mode, idx) abort
-	let dir = input('Start searching from directory: ', s:GR.start_dir[a:idx], 'dir')
-	echo "\r"
+function! s:toggle_grep_option(opt) abort
+	let val = {1:0x01, 2:0x02, 3:0x04, 4:0x08}
+	let s:gr["OPT"] = xor(s:gr["OPT"], val[a:opt])
+	call s:refresh()
+endfunction
 
-	if empty(dir)
-		return ""
-	elseif !isdirectory(dir)
-		echohl WarningMsg | echomsg 'Error: Directory ' . dir. " doesn't exist" | echohl None
-		return ""
-	else
-		let dir = substitute(dir, has('unix') ? "/$" : "\$", "", "")
-		return fnamemodify(dir, ':p:h')
+"-------------------------------------------------------
+" key_CR
+"-------------------------------------------------------
+function! s:key_CR() abort
+	if line('.') == 1
+		call s:input_search_pattern()
+	elseif line('.') == 2
+		call s:edit_start_dir()
 	endif
 endfunction
 
 "-------------------------------------------------------
-" set_grep_option()
+" select_start_dir
 "-------------------------------------------------------
-function! s:set_grep_option(opt) abort
-	let val = {'w':0x01, 'c':0x02, 'r':0x04, 'e':0x08}
-	let lno = {'w':4, 'c':5, 'r':6, 'e':7}
-	let s:GR.option = xor(s:GR.option, val[a:opt])
+function! s:select_start_dir(dir) abort
+	let s:dirNo = s:dirNo + a:dir
+	if s:dirNo > 5
+		let s:dirNo = 0
+	elseif s:dirNo < 0
+		let s:dirNo = 5
+	endif
+	call s:refresh()
 endfunction
 
 "-------------------------------------------------------
-" make_grep_cmd_rg()
+" toggle_grep_option
 "-------------------------------------------------------
-function! s:make_grep_cmd_rg() abort
+function! s:close() abort
+	silent! close
+endfunction
+
+"-------------------------------------------------------
+" make_grep_cmd_rg
+"-------------------------------------------------------
+function! s:make_grep_cmd_rg(search_pattern) abort
 	let opt = ''
 	"Word Search
-	let opt .= and(s:GR.option, 0x1) ? 'w' : ''
+	let opt .= and(s:gr["OPT"], 0x1) ? 'w' : ''
 	"Case-senstive
-	let opt .= and(s:GR.option, 0x2) ? 'i' : ''
+	let opt .= and(s:gr["OPT"], 0x2) ? 'i' : ''
 	"Disable Regular expressions
-	let opt .= and(s:GR.option, 0x4) ? 'F' : ''
+	let opt .= and(s:gr["OPT"], 0x4) ? 'F' : ''
 	if strlen(opt)
 		let opt = '-'.opt
 	endif
 	" Encording(sjis/utf-8)
-	let opt .= and(s:GR.option, 0x8) ? ' -E sjis' : ' -E utf8'
+	let opt .= and(s:gr["OPT"], 0x8) ? ' -E sjis' : ' -E utf8'
 
-	let cmd = 'grep! '.opt.' -g *.{'.s:GR.filter.'} "'.s:GR.search_pattern. '" '.s:GR.start_dir[0]
+	let cmd = 'grep! '.opt.' -g *.{'.s:gr["FILTER"].'} "'.a:search_pattern. '" '.s:gr["DIR"][0]
 
 	return cmd
 endfunction
 
 "-------------------------------------------------------
-" make_grep_cmd_vim()
+" make_grep_cmd_grep
 "-------------------------------------------------------
-function! s:make_grep_cmd_vim() abort
+function! s:make_grep_cmd_vim(search_pattern) abort
 	let cmd = 'vimgrep! '
 	"Word Search
-	let cmd .= and(s:GR.option, 0x1) ? '/\<'.s:GR.search_pattern : '/'.s:GR.search_pattern
+	let cmd .= and(s:gr["OPT"], 0x1) ? '/\<'.a:search_pattern : '/'.a:search_pattern
 	"Case-senstive
-	let cmd .= and(s:GR.option, 0x2) ? '\C' : '\c'
+	let cmd .= and(s:gr["OPT"], 0x2) ? '\C' : '\c'
 	"Word Search
-	let cmd .= and(s:GR.option, 0x1) ? '\>/j ' : '/j '
+	let cmd .= and(s:gr["OPT"], 0x1) ? '\>/j ' : '/j '
 	"Start search directory
-	let cmd .= s:GR.start_dir[0]
+	let cmd .= s:gr["DIR"][0]
 	"File filter
-	let cmd .= '/**/*.'.substitute(s:GR.filter, ",", " **/*.", "g")
+	let cmd .= '/**/*.'.substitute(s:gr["FILTER"], ",", " **/*.", "g")
 
 	return cmd
 endfunction
 
 "-------------------------------------------------------
-" make_grep_cmd_grep()
+" make_grep_cmd_grep
 "-------------------------------------------------------
-function! s:make_grep_cmd_grep() abort
+function! s:make_grep_cmd_grep(search_pattern) abort
 	let opt = ''
 	"Word Search
-	let opt .= and(s:GR.option, 0x1) ? 'w' : ''
+	let opt .= and(s:gr["OPT"], 0x1) ? 'w' : ''
 	"Case-senstive
-	let opt .= and(s:GR.option, 0x2) ? 'i' : ''
+	let opt .= and(s:gr["OPT"], 0x2) ? 'i' : ''
 
 	"Filter
-	if stridx(s:GR.filter, ',') >= 0
-		let filter = "--include={*.".substitute(s:GR.filter, ",", ",*.", "g")."}"
-	elseif  s:GR.filter != '*'
-		let filter = "--include=*.".s:GR.filter
-	else
-		let filter = ""
+	if stridx(s:gr["FILTER"], ',') >= 0
+		let filter = "--include={*.".substitute(s:gr["FILTER"], ",", ",*.", "g")."}"
+	elseif  s:grFilter!= '*'
+		let filter = "--include=*.".s:gr["FILTER"]
 	endif
 
-	let cmd = printf('grep! -r%s "%s" %s %s', opt, s:GR.search_pattern, s:GR.start_dir[0], filter)
+	let cmd = printf('grep! -r%s %s %s %s', opt, a:search_pattern, s:gr["DIR"][0], filter)
 
 	return cmd
 endfunction
 
 "-------------------------------------------------------
-" run_grep()
+" run_grep
 "-------------------------------------------------------
 function! s:run_grep() abort
-	if empty(s:GR.search_pattern) | return 1 | endif
+	if bufwinnr('-gr-') != -1
+		silent! close
+	endif
+
+	if empty(s:search_pattern) | return 1 | endif
 
 	" Save search option, Filter and directory
-	unlet s:GR.start_dir[5]
-	let g:GR = deepcopy(s:GR)
+	call s:organize_dir()
+	let g:GR = s:gr
 
-	" Close the QuickFix. and Move latest quickfix
+	" Close the QuickFix
 	cclose
 	let cnew_count = getqflist({'nr':'$'}).nr - getqflist({'nr':0}).nr
 	if cnew_count
 		execute printf('cnew %d', cnew_count)
 	endif
 
+	" escape meta character
+	let search_pattern = escape(s:search_pattern, ' *?[{`$%#"|!<>();&' . "'\t\n")
+
 	" Run grep
-	if g:Gr_Grep_Proc == 'ripgrep'
-		let cmd = s:make_grep_cmd_rg()
+	if g:Gr_Grep_Proc == 'rg'
+		let cmd = s:make_grep_cmd_rg(search_pattern)
 	elseif g:Gr_Grep_Proc == 'grep'
-		let cmd = s:make_grep_cmd_grep()
+		let cmd = s:make_grep_cmd_grep(search_pattern)
 	else
-		let cmd = s:make_grep_cmd_vim()
+		let cmd = s:make_grep_cmd_vim(search_pattern)
 	endif
 	silent! execute cmd
 
 	" If there is a hit as a result of the search, display the QuickFix and set it to be rewritable.
-	if len(getqflist())
-		exe 'botright copen'
-		redraw!
-		set modifiable
-		set nowrap
-	else
-		redraw!
-		echo "Search pattern not found"
-	endif
+    if len(getqflist())
+    	exe 'botright copen'
+    	redraw!
+    	set modifiable
+    	set nowrap
+    else
+    	redraw!
+    	echo "Search pattern not found"
+    endif
 endfunction
 
 "-------------------------------------------------------
-" create_popup()
+" organize_dir
 "-------------------------------------------------------
-function! s:create_popup(mid) abort
-	let menu = s:make_menu(a:mid)
-	let handler = a:mid == "MAIN" ?
-		\ "s:main_menu_selected_handler" :
-		\ "s:dir_menu_selected_handler"
+function! s:organize_dir() abort
+	" Get selected directory
+	let temp = remove(s:gr["DIR"], s:dirNo)
 
-	const winid = popup_create(menu, {
-			\ 'border': [1,1,1,1],
-			\ 'borderchars': ['─', '│', '─', '│', '┌', '┐', '┘', '└'],
-			\ 'cursorline': 1,
-			\ 'wrap': v:false,
-			\ 'mapping': v:false,
-			\ 'title': ' '.g:Gr_Grep_Proc.' ',
-			\ 'callback': handler,
-			\ 'filter': 'Gr_popup_menu_filter',
-			\ 'filtermode': 'n'
-			\ })
-	call popup_filter_menu(winid,'k')
+	" Remove s:gr["DIR"][5] and [4]
+	while len(s:gr["DIR"]) > 4
+		call remove(s:gr["DIR"], -1)
+	endwhile
 
-	let s:current_mid = a:mid
+	" Insert selected directory
+	call insert(s:gr["DIR"], temp, 0)
 endfunction
 
 "-------------------------------------------------------
-" Gr_popup_menu_filter()
+" edit_start_dir
 "-------------------------------------------------------
-function! Gr_popup_menu_filter(winid, key) abort
-	" ---------------------------
-	"  When pressed 'l' key
-	" ---------------------------
-"	if a:key == 'l'
-"		call win_execute(a:winid, 'let w:lnum = line(".")')
-"		let index = getwinvar(a:winid, 'lnum', 0)
-"		call popup_close(a:winid, index)
-"		return 1
-"	endif
+function! s:edit_start_dir() abort
+	let dir = input('Start searching from directory: ', s:gr["DIR"][s:dirNo], 'dir')
+	echo "\r"
+	if empty(dir) | return 0 | endif
 
-	" ---------------------------
-	"  When pressed 'h' key
-	" ---------------------------
-"	if a:key == 'h' && s:current_mid == "DIR"
-"		call popup_close(a:winid, -10)
-"		return 1
-"	endif
-
-	" ---------------------------
-	"  When pressed 'q' key
-	" ---------------------------
-	if a:key == 'q'
-		call popup_close(a:winid, -11)
-		return 1
-	endif
-
-	" ---------------------------
-	"  When pressed shortcut key
-	" ---------------------------
-	let index = stridx(s:short_cut_key, a:key)
-	if index >= 0
-		call popup_close(a:winid, index + 1)
-		return 1
-	endif
-
-	" ---------------------------
-	"  press 'g' at MAIN
-	" ---------------------------
-	if a:key == 'g' && s:current_mid == "MAIN"
-		call popup_close(a:winid, 0x8000)
-		return 1
-	endif
-
-	" ---------------------------
-	"  press 'e' at DIR
-	" ---------------------------
-	if a:key == 'e' && s:current_mid == "DIR"
-		call win_execute(a:winid, 'let w:lnum = line(".")')
-		let edit_no = getwinvar(a:winid, 'lnum', 0)
-		let index = or(0x80, edit_no)
-		call popup_close(a:winid, index)
-		return 1
-	endif
-
-	" --------------------------------
-	"  Other, pass to normal filter
-	" --------------------------------
-	return popup_filter_menu(a:winid, a:key)
-endfunction
-
-"-------------------------------------------------------
-" main_menu_selected_handler()
-"-------------------------------------------------------
-function! s:main_menu_selected_handler(winid, result) abort
-	if a:result == 0x8000	 " Run grep
-		call s:run_grep()
-
-	elseif a:result == 1	 " Search pattern
-		call s:input_search_pattern()
-		call s:create_popup('MAIN')
-
-	elseif a:result == 2	 " Start searching from directory
-		call s:create_popup("DIR")
-
-	elseif a:result == 3	 " file filter
-		call s:input_file_filter()
-		call s:create_popup('MAIN')
-
-	elseif a:result == 4	 " Search option (Word Search)
-		call s:set_grep_option('w')
-		call s:create_popup('MAIN')
-
-	elseif a:result == 5	" Search option (Case-senstive)
-		call s:set_grep_option('c')
-		call s:create_popup('MAIN')
-
-	elseif a:result == 6	" Regular expressions
-		call s:set_grep_option('r')
-		call s:create_popup('MAIN')
-
-	elseif a:result == 7	" Encording
-		call s:set_grep_option('e')
-		call s:create_popup('MAIN')
-	endif
-endfunction
-
-"-------------------------------------------------------
-" dir_menu_selected_handler()
-"-------------------------------------------------------
-function! s:dir_menu_selected_handler(winid, result) abort
-	if a:result >= 1 && a:result <= 5
-		let temp = s:GR.start_dir[a:result - 1]
-		call remove(s:GR.start_dir, a:result - 1)
-		call insert(s:GR.start_dir, temp, 0)
-		call s:create_popup("MAIN")
-
-	elseif a:result == 6
-		let dir = s:GR.start_dir[5]
-		let idx = index(s:GR.start_dir, dir)
-		if idx >= 0 && idx <= 4
-			call remove(s:GR.start_dir, idx)
-		else
-			call remove(s:GR.start_dir, 4)
-		endif
-		call insert(s:GR.start_dir, dir, 0)
-		call s:create_popup("MAIN")
-
-	elseif a:result >= 0x81 && a:result <= 0x86
-		let dir = s:input_start_dir("edit", and(a:result, 0x7F) - 1)
-		if !empty(dir)
-			let idx = index(s:GR.start_dir, dir)
-			if idx >= 0 && idx <= 4
-				call remove(s:GR.start_dir, idx)
-			else
-				call remove(s:GR.start_dir, 4)
+	if isdirectory(dir)
+		let temp = fnamemodify(dir, ':p:h')
+		let index = len(s:gr["DIR"]) - 2
+		for n in range(0, len(s:gr["DIR"]) - 2)
+			if s:gr["DIR"][n] == temp
+				let index = n
+				break
 			endif
-			call insert(s:GR.start_dir, dir, 0)
-			call s:create_popup("MAIN")
-		else
-			call s:create_popup("DIR")
-		endif
-
-	elseif a:result == -11
-		call s:create_popup("MAIN")
+		endfor
+		let s:dirNo = 0
+		call remove(s:gr["DIR"], index)
+		call insert(s:gr["DIR"], temp, 0)
+		call s:refresh()
+	else
+		echohl WarningMsg | echomsg 'Error: Directory ' . dir. " doesn't exist" | echohl None
+		sleep 1
+		call s:refresh()
 	endif
 endfunction
 
 "-------------------------------------------------------
-" Gr()
+" s:create_buffe
 "-------------------------------------------------------
-function! gr#Gr(range, line1, line2) abort
-	let s:GR = deepcopy(g:GR)
+function! s:create_buffer() abort
+	"If Already in the window, jump to it
+	let winnum = bufwinnr('-gr-')
+	if winnum != -1
+		exe winnum.'wincmd w'
+		return
+	endif
+
+	"Open a new floating window
+	exe 'silent! botright 3 '.'split -gr-'
+    setlocal winfixheight winfixwidth
+
+	"Start modify, Clear buffer
+	setlocal modifiable
+	silent! %delete _
+
+	"Configure buffer
+	setlocal buftype=nofile
+	setlocal bufhidden=delete
+	setlocal noswapfile
+
+	setlocal nobuflisted
+	setlocal nowrap
+	setlocal nonumber
+	setlocal filetype=gr
+
+	"Set keymap
+	nnoremap <buffer> <silent> g :call <SID>run_grep()<CR>
+	nnoremap <buffer> <silent> <CR> :call <SID>key_CR()<CR>
+	nnoremap <buffer> <silent> <S-j> :call <SID>select_start_dir(1)<CR>
+	nnoremap <buffer> <silent> <S-k> :call <SID>select_start_dir(-1)<CR>
+	nnoremap <buffer> <silent> f :call <SID>input_file_filter()<CR>
+	nnoremap <buffer> <silent> w :call <SID>toggle_grep_option(1)<CR>
+	nnoremap <buffer> <silent> c :call <SID>toggle_grep_option(2)<CR>
+	nnoremap <buffer> <silent> r :call <SID>toggle_grep_option(3)<CR>
+	nnoremap <buffer> <silent> e :call <SID>toggle_grep_option(4)<CR>
+	nnoremap <buffer> <silent> q :call <SID>close()<CR>
+
+	" Put to buffer
+	call s:make_menu()
+	silent! 0put = s:menu
+
+	" Delete the empty line at the end of the buffer
+	silent! $delete _
+
+	" Set highlight
+	execute 'syntax match gr_dir "^ Directory.*"'
+	execute 'syntax match gr_opt "^ Option.*"'
+	highlight link gr_dir Directory
+	highlight link gr_opt Label
+
+	" Move the cursor to the beginning of the file
+"	normal! gg
+"	normal! h
+	call setpos('.', [0, 0, 17, 0])
+
+	setlocal nomodifiable
+endfunction
+
+"-------------------------------------------------------
+" Gr
+"-------------------------------------------------------
+function! Gr#Gr(range, line1, line2) abort
 	if a:range
 		let temp = @@
 		silent normal gvy
-		let search_pattern = @@
+		let s:search_pattern = @@
 		let @@ = temp
 	else
-		let search_pattern = expand('<cword>')
+		let s:search_pattern = expand('<cword>')
 	endif
-	let s:GR.search_pattern = escape(search_pattern, '^$.*[]/~\')
-	call insert(s:GR.start_dir, expand('%:p:h'), len(s:GR.start_dir))
 
-	call s:create_popup("MAIN")
+	let s:dirNo = 0
+	let s:gr = deepcopy(g:GR)
+	call add(s:gr["DIR"], expand('%:p:h'))
+	call s:create_buffer()
 endfunction
 
 let &cpoptions = s:save_cpo
