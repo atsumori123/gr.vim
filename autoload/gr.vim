@@ -138,19 +138,19 @@ endfunction
 function! s:make_menu() abort
 	let s:menu = []
 
-	call add(s:menu, " Search pattern	 : ".s:gr["PATTERN"]." ")
-	call add(s:menu, " Directory 1		 : ".s:gr["DIR"][0]." ")
-	call add(s:menu, "			 2		 : ".s:gr["DIR"][1]." ")
-	call add(s:menu, "			 3		 : ".s:gr["DIR"][2]." ")
-	call add(s:menu, "			 4		 : ".s:gr["DIR"][3]." ")
-	call add(s:menu, "			 5		 : ".s:gr["DIR"][4]." ")
-	call add(s:menu, " File filter		 : ".s:gr["FILTER"])
-	call add(s:menu, " Word search		 : ".(and(s:gr["OPT"], 0x01) ? "on" : "off"))
-	call add(s:menu, " Case-sensitive	 : ".(and(s:gr["OPT"], 0x02) ? "on" : "off"))
+	call add(s:menu, " Search pattern    : ".s:gr["PATTERN"]." ")
+	call add(s:menu, " Directory 1       : ".s:gr["DIR"][0]." ")
+	call add(s:menu, "           2       : ".s:gr["DIR"][1]." ")
+	call add(s:menu, "           3       : ".s:gr["DIR"][2]." ")
+	call add(s:menu, "           4       : ".s:gr["DIR"][3]." ")
+	call add(s:menu, "           5       : ".s:gr["DIR"][4]." ")
+	call add(s:menu, " File filter       : ".s:gr["FILTER"])
+	call add(s:menu, " Word search       : ".(and(s:gr["OPT"], 0x01) ? "on" : "off"))
+	call add(s:menu, " Case-sensitive    : ".(and(s:gr["OPT"], 0x02) ? "on" : "off"))
 	let s:short_cut_key = 'gs12345fwc'
 	if g:GR_GrepCommand == 'ripgrep'
-		call add(s:menu, " Regexp (.*foo)	 : ".(and(s:gr["OPT"], 0x04) ? "on" : "off"))
-		call add(s:menu, " Encording		 : ".(and(s:gr["OPT"], 0x08) ? "sijs" : "utf8"))
+		call add(s:menu, " Regexp (.*foo)    : ".(and(s:gr["OPT"], 0x04) ? "on" : "off"))
+		call add(s:menu, " Encording         : ".(and(s:gr["OPT"], 0x08) ? "sijs" : "utf8"))
 		let s:short_cut_key .= 're'
 	endif
 endfunction
