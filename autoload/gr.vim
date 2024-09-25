@@ -21,6 +21,17 @@ function! s:open_popup() abort
 endfunction
 
 "*******************************************************
+" Get window width
+"*******************************************************
+function! s:get_window_width() abort
+	let width = 0
+	for v in s:menu
+		if width < strlen(v) | let width = strlen(v) | endif
+	endfor
+	return (&columns - 10) < width ? (&columns - 10) : width
+endfunction
+
+"*******************************************************
 " ReDraw menu
 "*******************************************************
 function! s:redraw() abort
@@ -36,6 +47,17 @@ function! s:redraw() abort
 		" Move the cursor to the beginning of the file
 		call setpos(".", [0, 1, 1, 0])
 		setlocal nomodifiable
+
+		" Re.set window layout
+		let width = s:get_window_width()
+		call nvim_win_set_config(win_getid(), {
+			\ 'width': width,
+			\ 'height': len(s:menu),
+			\ 'relative': 'editor',
+			\ 'row': (&lines - len(s:menu)) / 2,
+			\ 'col': (&columns - width) / 2,
+			\})
+
 	else
 		call s:open_popup()
 	endif
@@ -45,21 +67,15 @@ endfunction
 " Open floating window
 "*******************************************************
 function! s:open_floating_window()
-	let width = 0
-	for v in s:menu
-		if width < strlen(v) | let width = strlen(v) | endif
-	endfor
-	let cx = &columns / 2 - 4
-	if (&columns - 10) < width | let width = (&columns - 10) | endif
-
 	" open floating window
+	let width = s:get_window_width()
 	let win_id = nvim_open_win(bufnr('%'), v:true, {
 		\	'width': width,
 		\	'height': len(s:menu),
-		\	'relative': 'cursor',
+		\	'relative': 'editor',
 		\	'anchor': "NW",
-		\	'row': 1,
-		\	'col': 0,
+		\	'row': (&lines - len(s:menu)) / 2,
+		\	'col': (&columns - width) / 2,
 		\	'external': v:false,
 		\})
 
@@ -73,6 +89,7 @@ function! s:open_floating_window()
 	setlocal noswapfile
 	setlocal nowrap
 	setlocal nonumber
+	setlocal nocursorcolumn
 
 	nnoremap <buffer> <silent> <CR> :call <SID>grep_menu_selected_handler(0, line("."))<CR>
 	nnoremap <buffer> <silent> s :call <SID>grep_menu_selected_handler(0, 1)<CR>
@@ -90,10 +107,9 @@ function! s:open_floating_window()
 	nnoremap <buffer> <silent> g :call <SID>grep_menu_selected_handler(0, 0)<CR>
 	nnoremap <buffer> <silent> q :close<CR>
 
-
 	syntax match GrLabel '^ .*: '
 	highlight default link GrLabel Label
-	highlight GrBg guibg=#202020
+	highlight GrBg guibg=#464442
 	set winhighlight=Normal:GrBg
 endfunction
 
@@ -138,19 +154,19 @@ endfunction
 function! s:make_menu() abort
 	let s:menu = []
 
-	call add(s:menu, " Search pattern    : ".s:gr["PATTERN"]." ")
-	call add(s:menu, " Directory 1       : ".s:gr["DIR"][0]." ")
-	call add(s:menu, "           2       : ".s:gr["DIR"][1]." ")
-	call add(s:menu, "           3       : ".s:gr["DIR"][2]." ")
-	call add(s:menu, "           4       : ".s:gr["DIR"][3]." ")
-	call add(s:menu, "           5       : ".s:gr["DIR"][4]." ")
-	call add(s:menu, " File filter       : ".s:gr["FILTER"])
-	call add(s:menu, " Word search       : ".(and(s:gr["OPT"], 0x01) ? "on" : "off"))
-	call add(s:menu, " Case-sensitive    : ".(and(s:gr["OPT"], 0x02) ? "on" : "off"))
+	call add(s:menu, " Search pattern  : ".s:gr["PATTERN"]." ")
+	call add(s:menu, " Directory 1     : ".s:gr["DIR"][0]." ")
+	call add(s:menu, "           2     : ".s:gr["DIR"][1]." ")
+	call add(s:menu, "           3     : ".s:gr["DIR"][2]." ")
+	call add(s:menu, "           4     : ".s:gr["DIR"][3]." ")
+	call add(s:menu, "           5     : ".s:gr["DIR"][4]." ")
+	call add(s:menu, " File filter     : ".s:gr["FILTER"])
+	call add(s:menu, " Word search     : ".(and(s:gr["OPT"], 0x01) ? "on" : "off"))
+	call add(s:menu, " Case-sensitive  : ".(and(s:gr["OPT"], 0x02) ? "on" : "off"))
 	let s:short_cut_key = 'gs12345fwc'
 	if g:GR_GrepCommand == 'ripgrep'
-		call add(s:menu, " Regexp (.*foo)    : ".(and(s:gr["OPT"], 0x04) ? "on" : "off"))
-		call add(s:menu, " Encording         : ".(and(s:gr["OPT"], 0x08) ? "sijs" : "utf8"))
+		call add(s:menu, " Regexp (.*foo)  : ".(and(s:gr["OPT"], 0x04) ? "on" : "off"))
+		call add(s:menu, " Encording       : ".(and(s:gr["OPT"], 0x08) ? "sijs" : "utf8"))
 		let s:short_cut_key .= 're'
 	endif
 endfunction
@@ -189,7 +205,7 @@ function! s:edit_start_dir(n) abort
 		let dir = fnamemodify(dir, ':p:h')
 		call remove(s:gr["DIR"], index(s:gr["DIR"], dir))
 		call insert(s:gr["DIR"], dir, 0)
-		let s:gr["DIR"][4] = expand('%:p:h')
+		let s:gr["DIR"][4] = s:current_dir
 
 	else
 		echohl WarningMsg | echomsg 'Error: Directory ' . dir. " doesn't exist" | echohl None
@@ -362,10 +378,11 @@ endfunction
 " Start grep
 "*******************************************************
 function! gr#start(range, start, end) abort
+	let s:current_dir = expand('%:p:h')
 	if !exists('s:gr')
 		let s:gr = {}
 		let s:gr["PATTERN"] = ""
-		let s:gr["DIR"] = [getcwd(), getcwd(), getcwd(), getcwd(), expand('%:p:h')]
+		let s:gr["DIR"] = [getcwd(), getcwd(), getcwd(), getcwd(), s:current_dir]
 		let s:gr["FILTER"] = 'c,cpp'
 		let s:gr["OPT"] = 0x03
 	endif
@@ -379,7 +396,7 @@ function! gr#start(range, start, end) abort
 		let s:gr["PATTERN"] = expand('<cword>')
 	endif
 	let s:gr["PATTERN"] = escape(s:gr["PATTERN"], '^$.*[]/~\')
-	let s:gr["DIR"][4] = expand('%:p:h')
+	let s:gr["DIR"][4] = s:current_dir
 
 	call s:make_menu()
 	if has('nvim')
