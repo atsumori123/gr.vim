@@ -382,7 +382,7 @@ function! gr#start(range, start, end) abort
 	if !exists('s:gr')
 		let s:gr = {}
 		let s:gr["PATTERN"] = ""
-		let s:gr["DIR"] = [getcwd(), getcwd(), getcwd(), getcwd(), s:current_dir]
+		let s:gr["DIR"] = [s:current_dir, getcwd(), getcwd(), getcwd(), s:current_dir]
 		let s:gr["FILTER"] = 'c,cpp'
 		let s:gr["OPT"] = 0x03
 	endif
