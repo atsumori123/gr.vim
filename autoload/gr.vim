@@ -69,14 +69,18 @@ endfunction
 function! s:open_floating_window()
 	" open floating window
 	let width = s:get_window_width()
+	let height = len(s:menu)
+
 	let win_id = nvim_open_win(bufnr('%'), v:true, {
+		\	'title': ' '.g:GR_GrepCommand.' ',
 		\	'width': width,
-		\	'height': len(s:menu),
+		\	'height': height,
 		\	'relative': 'editor',
 		\	'anchor': "NW",
-		\	'row': (&lines - len(s:menu)) / 2,
+		\	'row': (&lines - height) / 2,
 		\	'col': (&columns - width) / 2,
 		\	'external': v:false,
+		\	'border': "single",
 		\})
 
 	" draw to new buffer
@@ -90,6 +94,7 @@ function! s:open_floating_window()
 	setlocal nowrap
 	setlocal nonumber
 	setlocal nocursorcolumn
+	setlocal nocursorline
 
 	nnoremap <buffer> <silent> <CR> :call <SID>grep_menu_selected_handler(0, line("."))<CR>
 	nnoremap <buffer> <silent> s :call <SID>grep_menu_selected_handler(0, 1)<CR>
@@ -109,8 +114,8 @@ function! s:open_floating_window()
 
 	syntax match GrLabel '^ .*: '
 	highlight default link GrLabel Label
-	highlight GrBg guibg=#464442
-	set winhighlight=Normal:GrBg
+	highlight default link FloatBorder Normal
+	set winhighlight=Normal:Normal
 endfunction
 
 "*******************************************************
@@ -193,7 +198,6 @@ endfunction
 " Edit start directory
 "*******************************************************
 function! s:edit_start_dir(n) abort
-	echo "n=".a:n
 	let dir = input('Start searching from directory: ', s:gr["DIR"][a:n], 'dir')
 	echo "\r"
 
