@@ -288,7 +288,7 @@ function! s:generate_cmd_grep() abort
 	"Filter
 	if stridx(s:gr["FILTER"], ',') >= 0
 		let filter = "--include={*.".substitute(s:gr["FILTER"], ",", ",*.", "g")."}"
-	elseif	s:grFilter!= '*'
+	elseif	s:gr["FILTER"] != '*'
 		let filter = "--include=*.".s:gr["FILTER"]
 	endif
 
