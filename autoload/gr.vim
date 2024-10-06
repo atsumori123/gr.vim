@@ -290,6 +290,8 @@ function! s:generate_cmd_grep() abort
 		let filter = "--include={*.".substitute(s:gr["FILTER"], ",", ",*.", "g")."}"
 	elseif	s:gr["FILTER"] != '*'
 		let filter = "--include=*.".s:gr["FILTER"]
+	else
+		let filter = ""
 	endif
 
 	let cmd = printf('grep! -r%s %s %s %s', opt, s:gr["PATTERN"], s:gr["DIR"][0], filter)
