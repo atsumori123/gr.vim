@@ -401,7 +401,7 @@ function! gr#start(range, start, end) abort
 	else
 		let s:gr["PATTERN"] = expand('<cword>')
 	endif
-	let s:gr["PATTERN"] = escape(s:gr["PATTERN"], '^$.*[]/~\')
+	"let s:gr["PATTERN"] = escape(s:gr["PATTERN"], '^$.*[]/~\')
 	let s:gr["DIR"][4] = s:current_dir
 
 	call s:make_menu()
