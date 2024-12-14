@@ -270,7 +270,7 @@ function! s:generate_cmd_vimgrep() abort
 	"Start search directory
 	let cmd .= s:gr["DIR"][0]
 	"File filter
-	let cmd .= '/**/*.'.substitute(s:gr["FILTER"], ",", " **/*.", "g")
+	let cmd .= '/ **/*.'.substitute(s:gr["FILTER"], ",", " **/*.", "g")
 
 	return cmd
 endfunction
@@ -314,6 +314,8 @@ function! s:run_grep() abort
 
 	" escape meta character
 "	let s:gr["PATTERN"] = escape(s:gr["PATTERN"], ' *?[{`$%#"|!<>();&' . "'\t\n")
+
+	execute 'lcd '.s:gr["DIR"][0]
 
 	" Run grep
 	if g:GR_GrepCommand == 'ripgrep'
