@@ -167,12 +167,12 @@ function! s:make_menu() abort
 	call add(s:menu, "           5     : ".s:gr["DIR"][4]." ")
 	call add(s:menu, " File filter     : ".s:gr["FILTER"])
 	call add(s:menu, " Word search     : ".(and(s:gr["OPT"], 0x01) ? "on" : "off"))
-	call add(s:menu, " Case-sensitive  : ".(and(s:gr["OPT"], 0x02) ? "on" : "off"))
-	let s:short_cut_key = 'gs12345fwc'
+	call add(s:menu, " Case sensitive  : ".(and(s:gr["OPT"], 0x02) ? "on" : "off"))
+	call add(s:menu, " RegExp          : ".(and(s:gr["OPT"], 0x04) ? "on" : "off"))
+	let s:short_cut_key = 'gs12345fwcr'
 	if g:GR_GrepCommand == 'ripgrep'
-		call add(s:menu, " Regexp (.*foo)  : ".(and(s:gr["OPT"], 0x04) ? "on" : "off"))
 		call add(s:menu, " Encording       : ".(and(s:gr["OPT"], 0x08) ? "sijs" : "utf8"))
-		let s:short_cut_key .= 're'
+		let s:short_cut_key .= 'e'
 	endif
 endfunction
 
@@ -312,8 +312,10 @@ function! s:run_grep() abort
 		execute printf('cnew %d', cnew_count)
 	endif
 
-	" escape meta character
-"	let s:gr["PATTERN"] = escape(s:gr["PATTERN"], ' *?[{`$%#"|!<>();&' . "'\t\n")
+	" if reglar expression is disabled then escape meta character
+	if and(s:gr['OPT'], 0x04) == 0
+		let s:gr["PATTERN"] = escape(s:gr["PATTERN"], ' *?[]{}`$%#"|!<>();&' . "'\t\n")
+	endif
 
 	execute 'lcd '.s:gr["DIR"][0]
 
