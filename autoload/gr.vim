@@ -312,6 +312,9 @@ function! s:run_grep() abort
 		execute printf('cnew %d', cnew_count)
 	endif
 
+	" Display grep executing...
+	echohl Search | echomsg ">>> grep executing..." | echohl None
+
 	" if reglar expression is disabled then escape meta character
 	if and(s:gr['OPT'], 0x04) == 0
 		let s:gr["PATTERN"] = escape(s:gr["PATTERN"], ' *?[]{}`$%#"|!<>();&' . "'\t\n")
@@ -334,6 +337,7 @@ function! s:run_grep() abort
 		redraw!
 		set modifiable
 		set nowrap
+		echo len(getqflist())." hits"
 	else
 		redraw!
 		echo "Search pattern not found"
