@@ -283,7 +283,7 @@ function! s:generate_cmd_grep() abort
 	"Word Search
 	let opt .= and(s:gr["OPT"], 0x1) ? 'w' : ''
 	"Case-senstive
-	let opt .= and(s:gr["OPT"], 0x2) ? 'i' : ''
+	let opt .= and(s:gr["OPT"], 0x2) ? '' : 'i'
 
 	"Filter
 	if stridx(s:gr["FILTER"], ',') >= 0
@@ -322,6 +322,7 @@ function! s:run_grep() abort
 
 	execute 'lcd '.s:gr["DIR"][0]
 
+	"let start_time = reltime()
 	" Run grep
 	if g:GR_GrepCommand == 'ripgrep'
 		silent! execute s:generate_cmd_ripgrep()
@@ -342,6 +343,7 @@ function! s:run_grep() abort
 		redraw!
 		echo "Search pattern not found"
 	endif
+	"echo reltimestr(reltime(start_time))
 endfunction
 
 "*******************************************************
