@@ -251,7 +251,7 @@ function! s:generate_cmd_ripgrep() abort
 	" Encording(sjis/utf-8)
 	let opt .= and(s:gr["OPT"], 0x8) ? ' -E sjis' : ' -E utf8'
 
-	let cmd = 'grep! '.opt.' -g *.{'.s:gr["FILTER"].'} "'.s:gr["PATTERN"]. '" '.s:gr["DIR"][0]
+	let cmd = 'grep! '.opt.' -g "*.{'.s:gr["FILTER"].'}" "'.s:gr["PATTERN"]. '" '.s:gr["DIR"][0]
 
 	return cmd
 endfunction
@@ -322,8 +322,8 @@ function! s:run_grep() abort
 
 	execute 'lcd '.s:gr["DIR"][0]
 
-	"let start_time = reltime()
 	" Run grep
+	let start_time = reltime()
 	if g:GR_GrepCommand == 'ripgrep'
 		silent! execute s:generate_cmd_ripgrep()
 	elseif g:GR_GrepCommand == 'grep'
@@ -331,6 +331,7 @@ function! s:run_grep() abort
 	else
 		silent! execute s:generate_cmd_vimgrep()
 	endif
+	let proc_time = substitute(reltimestr(reltime(start_time)), " ", "", "g")
 
 	" If there is a hit as a result of the search, display the QuickFix and set it to be rewritable.
 	if len(getqflist())
@@ -338,12 +339,11 @@ function! s:run_grep() abort
 		redraw!
 		set modifiable
 		set nowrap
-		echo len(getqflist())." hits"
+		echo len(getqflist())." hits.  (".proc_time." sec)"
 	else
 		redraw!
-		echo "Search pattern not found"
+		echo "Search pattern not found.  (".proc_time." sec)"
 	endif
-	"echo reltimestr(reltime(start_time))
 endfunction
 
 "*******************************************************
