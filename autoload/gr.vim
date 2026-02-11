@@ -108,6 +108,7 @@ function! s:open_floating_window()
 	nnoremap <buffer> <silent> c :call <SID>grep_menu_selected_handler(0, 9)<CR>
 	nnoremap <buffer> <silent> r :call <SID>grep_menu_selected_handler(0, 10)<CR>
 	nnoremap <buffer> <silent> n :call <SID>grep_menu_selected_handler(0, 11)<CR>
+	nnoremap <buffer> <silent> G :call <SID>grep_menu_selected_handler(0, 12)<CR>
 	nnoremap <buffer> <silent> e :call <SID>grep_menu_selected_handler(0, or(0x100, line(".")))<CR>
 	nnoremap <buffer> <silent> g :call <SID>grep_menu_selected_handler(0, 0)<CR>
 	nnoremap <buffer> <silent> q :close<CR>
@@ -169,8 +170,8 @@ function! s:make_menu() abort
 	call add(s:menu, " Word search     : ".(and(s:gr["OPT"], 0x01) ? "on" : "off"))
 	call add(s:menu, " Case sensitive  : ".(and(s:gr["OPT"], 0x02) ? "on" : "off"))
 	call add(s:menu, " RegExp          : ".(and(s:gr["OPT"], 0x04) ? "on" : "off"))
-	let s:short_cut_key = 'gs12345fwcr'
-	if g:GR_GrepCommand == 'ripgrep'
+	let s:short_cut_key = 'gs12345fwcrG'
+	if g:GR_GrepCommand == 'rg'
 		call add(s:menu, " Encording       : ".(and(s:gr["OPT"], 0x08) ? "sijs" : "utf8"))
 		let s:short_cut_key .= 'e'
 	endif
@@ -232,6 +233,41 @@ endfunction
 function! s:set_grep_option(opt) abort
 	let val = {'w':0x01, 'c':0x02, 'r':0x04, 'e':0x08}
 	let s:gr["OPT"] = xor(s:gr["OPT"], val[a:opt])
+endfunction
+
+"*******************************************************
+" Change grepprg
+"*******************************************************
+function! s:change_grepprg() abort
+	" vimgrep --> grep"
+	if g:GR_GrepCommand == 'internal'
+		let g:GR_GrepCommand = 'grep'
+		set grepprg=grep\ -nH\ $*
+		" -n : 行番号を表示
+		" -H : ファイル名を表示
+		" $* : grepコマンドの引数をここに展開する
+		set grepformat=%f:%l:%m
+
+	" grep --> git grep"
+	elseif g:GR_GrepCommand == 'grep'
+		let g:GR_GrepCommand = 'git grep'
+		set grepprg=git\ grep\ -I\ --line-number
+		" -I : バイナリファイルを除外する
+		" --line-number : 行番号を表示する
+		set grepformat=%f:%l:%m
+
+	" git grep --> ripgrep"
+	elseif g:GR_GrepCommand == 'git grep'
+		let g:GR_GrepCommand='rg'
+		set grepprg=rg\ --vimgrep\ --hidden
+		set grepformat=%f:%l:%c:%m
+
+	" ripgrep --> vimgrep"
+	else
+		let g:GR_GrepCommand = 'internal'
+		set grepprg=internal
+		set grepformat=%f:%l:%m,%f:%l%m,%f\ \ %l%m
+	endif
 endfunction
 
 "*******************************************************
@@ -324,9 +360,9 @@ function! s:run_grep() abort
 
 	" Run grep
 	let start_time = reltime()
-	if g:GR_GrepCommand == 'ripgrep'
+	if g:GR_GrepCommand == 'rg'
 		silent! execute s:generate_cmd_ripgrep()
-	elseif g:GR_GrepCommand == 'grep'
+	elseif g:GR_GrepCommand == 'grep' || g:GR_GrepCommand == 'git grep'
 		silent! execute s:generate_cmd_grep()
 	else
 		silent! execute s:generate_cmd_vimgrep()
@@ -379,7 +415,11 @@ function! s:grep_menu_selected_handler(winid, result) abort
 		call s:set_grep_option('r')
 		call s:redraw()
 
-	elseif a:result == 11	" Encording
+	elseif a:result == 11	" change grepprg
+		call s:change_grepprg()
+		call s:redraw()
+
+	elseif a:result == 12	" Encording
 		call s:set_grep_option('e')
 		call s:redraw()
 

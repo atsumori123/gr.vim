@@ -8,12 +8,7 @@ let g:loaded_GR = 1
 
 " Grep type
 if !exists('g:GR_GrepCommand')
-	let g:GR_GrepCommand = 'vimgrep'
-endif
-
-if executable('rg') && g:GR_GrepCommand == 'ripgrep'
-	let &grepprg = 'rg --vimgrep --hidden'
-	set grepformat=%f:%l:%c:%m
+	let g:GR_GrepCommand = 'internal'
 endif
 
 command! -nargs=0 -range Gr call gr#start(<range>, <line1>, <line2>)
