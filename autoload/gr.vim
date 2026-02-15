@@ -336,6 +336,33 @@ function! s:generate_cmd_grep() abort
 endfunction
 
 "*******************************************************
+" Generate grep git grep
+"*******************************************************
+function! s:generate_cmd_git_grep() abort
+	let opt = ''
+	"Word Search
+	let opt .= and(s:gr["OPT"], 0x1) ? ' -w' : ''
+	"Case-senstive
+	let opt .= and(s:gr["OPT"], 0x2) ? '' : ' -i'
+
+	"Filter
+	let filter = '--'
+	if s:gr["FILTER"] != '*'
+		let separator = has('unix') ? '/' : '\'
+		let s = split(s:gr["FILTER"], ',')
+		for extension in s
+			let filter .= ' '..s:gr["DIR"][0]..separator..'*.'..extension
+		endfor
+	els
+		let filter .= ' '..s:gr["DIR"][0]
+	endif
+
+	let cmd = printf('grep! %s %s %s', opt, s:gr["PATTERN"], filter)
+
+	return cmd
+endfunction
+
+"*******************************************************
 " Run grep
 "*******************************************************
 function! s:run_grep() abort
@@ -362,8 +389,10 @@ function! s:run_grep() abort
 	let start_time = reltime()
 	if g:GR_GrepCommand == 'rg'
 		silent! execute s:generate_cmd_ripgrep()
-	elseif g:GR_GrepCommand == 'grep' || g:GR_GrepCommand == 'git grep'
+	elseif g:GR_GrepCommand == 'grep'
 		silent! execute s:generate_cmd_grep()
+	elseif g:GR_GrepCommand == 'git grep'
+		silent! execute s:generate_cmd_git_grep()
 	else
 		silent! execute s:generate_cmd_vimgrep()
 	endif
