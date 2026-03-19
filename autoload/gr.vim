@@ -260,11 +260,12 @@ function! s:change_grepprg() abort
 	elseif g:GR_GrepCommand == 'git grep'
 		let g:GR_GrepCommand='rg'
 		set grepprg=rg\ --vimgrep\ --hidden
-		set grepformat=%f:%l:%c:%m
+		set grepformat=%f:%l:%m
 
 	" ripgrep --> vimgrep"
 	else
-		let g:GR_GrepCommand = 'internal'
+		let g:GR_GrepCommand = 'rg'
+		let g:GR_GrepCommand='internal'
 		set grepprg=internal
 		set grepformat=%f:%l:%m,%f:%l%m,%f\ \ %l%m
 	endif
