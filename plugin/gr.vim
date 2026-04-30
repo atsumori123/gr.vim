@@ -13,15 +13,21 @@ endif
 
 " Set grepprg & grepformat
 if g:GR_GrepCommand == 'grep'
-	set grepprg=grep\ -nH\ $*
+	set grepprg=grep\ -nHRF\ --binary-files=without-match
 	" -n : 行番号を表示
 	" -H : ファイル名を表示
-	" $* : grepコマンドの引数をここに展開する
+	" -R : 指定ディレクトリ以下を再帰的に検索
+	" -F-: 検索語を正規表現ではなく、ただの文字列として扱う
+	" --binary-files=without-match : バイナリファイルを検索対象から除外する
 	set grepformat=%f:%l:%m
 elseif g:GR_GrepCommand == 'git grep'
-	set grepprg=git\ grep\ -I\ --line-number
+"	set grepprg=git\ grep\ -n\ --no-color\ --fixed-strings\ --full-name\ --recurse-submodules\ --
+	set grepprg=git\ grep\ -nIF\ --no-color\ --full-name
+	" -n : 行番号を表示
 	" -I : バイナリファイルを除外する
-	" --line-number : 行番号を表示する
+	" -F-: 検索語を正規表現ではなく、ただの文字列として扱う
+	" ---no-color : 出力の色付けを無効にする
+	" --full-name : カレントディレクトリではなく、Gitリポジトリのルートからの相対パスでファイル名を表示する
 	set grepformat=%f:%l:%m
 elseif g:GR_GrepCommand == 'rg'
 	set grepprg=rg\ --vimgrep\ --hidden
