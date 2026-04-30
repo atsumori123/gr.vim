@@ -13,7 +13,7 @@ endif
 
 " Set grepprg & grepformat
 if g:GR_GrepCommand == 'grep'
-	set grepprg=grep\ -nHRF\ --binary-files=without-match
+	set grepprg=grep\ -nHR\ --binary-files=without-match
 	" -n : 行番号を表示
 	" -H : ファイル名を表示
 	" -R : 指定ディレクトリ以下を再帰的に検索
@@ -21,8 +21,7 @@ if g:GR_GrepCommand == 'grep'
 	" --binary-files=without-match : バイナリファイルを検索対象から除外する
 	set grepformat=%f:%l:%m
 elseif g:GR_GrepCommand == 'git grep'
-"	set grepprg=git\ grep\ -n\ --no-color\ --fixed-strings\ --full-name\ --recurse-submodules\ --
-	set grepprg=git\ grep\ -nIF\ --no-color\ --full-name
+	set grepprg=git\ grep\ -nI\ --no-color
 	" -n : 行番号を表示
 	" -I : バイナリファイルを除外する
 	" -F-: 検索語を正規表現ではなく、ただの文字列として扱う

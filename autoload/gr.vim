@@ -20,7 +20,6 @@ function! s:make_main_menu() abort
 	call add(menu, "(f) File filter       ".s:gr["FILTER"])
 	call add(menu, "(w) Word search       ".(and(s:gr["OPT"], 0x01) ? "*" : ""))
 	call add(menu, "(c) Case sensitive    ".(and(s:gr["OPT"], 0x02) ? "*" : ""))
-	call add(menu, "(r) Regular Exp       ".(and(s:gr["OPT"], 0x08) ? "*" : ""))
 	if g:GR_GrepCommand == 'rg'
 		call add(menu, "(0) Encording         ".(and(s:gr["OPT"], 0x10) ? "sijs" : "utf8"))
 	endif
@@ -140,12 +139,6 @@ function! s:main_menu_filter(winid, key) abort
 	elseif a:key ==# 'c' || unqkey ==# '6l'
 		" Search option (Case-senstive)
 		call s:set_grep_option(0x02)
-		call s:update_main_popup(a:winid)
-		return 1
-
-	elseif a:key ==# 'r' || unqkey ==# '7l'
-		" Regular expressions
-		call s:set_grep_option(0x08)
 		call s:update_main_popup(a:winid)
 		return 1
 
@@ -278,7 +271,7 @@ function! s:change_grepprg() abort
 	" vimgrep --> grep"
 	if g:GR_GrepCommand == 'internal'
 		let g:GR_GrepCommand = 'grep'
-		set grepprg=grep\ -nHRF\ --binary-files=without-match
+		set grepprg=grep\ -nHR\ --binary-files=without-match
 		" -n : 行番号を表示
 		" -H : ファイル名を表示
 		" -R : 指定ディレクトリ以下を再帰的に検索
@@ -289,8 +282,7 @@ function! s:change_grepprg() abort
 	" grep --> git grep"
 	elseif g:GR_GrepCommand == 'grep'
 		let g:GR_GrepCommand = 'git grep'
-"		set grepprg=git\ grep\ -nIF\
-		set grepprg=git\ grep\ -nIF\ --no-color\ --full-name
+		set grepprg=git\ grep\ -nI\ --no-color
 		" -n : 行番号を表示
 		" -I : バイナリファイルを除外する
 		" -F-: 検索語を正規表現ではなく、ただの文字列として扱う
@@ -316,7 +308,7 @@ endfunction
 "*******************************************************
 " make vimgrep command
 "*******************************************************
-function! s:make_cmd_vimgrep() abort
+function! s:make_vimgrep_cmd() abort
 	" 制御コードをエスケープする
 	let pattern = escape(s:search_pattern, '.^$*[]~\(){}+?')
 
@@ -338,16 +330,16 @@ endfunction
 "*******************************************************
 " make grep command
 "*******************************************************
-function! s:make_cmd_grep() abort
+function! s:make_grep_cmd() abort
 	let opt = ''
 	" Word Search
 	let opt .= and(s:gr["OPT"], 0x1) ? ' -w' : ''
 	" Case-senstive
-	let opt .= and(s:gr["OPT"], 0x2) ? '' : ' -i'
+	let opt .= and(s:gr["OPT"], 0x2) ? ' -F' : ' -i'
 
 	" Filter
 	if stridx(s:gr["FILTER"], ',') >= 0
-		let filter = ' --include=' . shellescape('*.{' . substitute(s:gr["FILTER"], ',', ',*.', 'g') . '}')
+		let filter = " --include={*.".substitute(s:gr["FILTER"], ",", ",*.", "g")."}"
 	elseif s:gr["FILTER"] != '*'
 		let filter = ' --include=' . shellescape('*.' . s:gr["FILTER"])
 	else
@@ -363,36 +355,35 @@ endfunction
 "*******************************************************
 " make grep git grep
 "*******************************************************
-function! s:make_cmd_git_grep() abort
+function! s:make_gitgrep_cmd() abort
 	let opt = ''
 	"Word Search
 	let opt .= and(s:gr["OPT"], 0x1) ? ' -w' : ''
 	"Case-senstive
-	let opt .= and(s:gr["OPT"], 0x2) ? '' : ' -i'
+	let opt .= and(s:gr["OPT"], 0x2) ? ' -F' : ' -i'
 
 	" Filter
-	if stridx(s:gr["FILTER"], ',') >= 0
-		let glob = '*.{'. substitute(s:gr["FILTER"], ',', ',*.', 'g') . '}'
-	elseif s:gr["FILTER"] != '*'
-		let glob = '*.' . s:gr["FILTER"]
-	else
-		let glob = ''
+	let filter = ''
+	if s:gr["FILTER"] != '*'
+		let separator = has('unix') ? '/' : '\'
+		let s = split(s:gr["FILTER"], ',')
+		for extension in s
+			let  filter.= ' ' . s:gr["DIR"][0] . separator . '*.' . extension
+		endfor
+	els
+		let filter .= ' ' . s:gr["DIR"][0]
 	endif
+	let filter = filter ==# '' ? '' : ' -- ' . filter
 
 	let pattern = shellescape(s:search_pattern)
-	let dir		= shellescape(s:start_directory)
 
-	" glob はパスspec として扱われるので shellescape しない
-	let glob_arg = glob ==# '' ? '' : ' -- ' . glob
-
-	" git grep を直接呼ぶ（grepprg に邪魔されない）
-    return 'grep! ' . opt . ' ' . pattern . glob_arg . ' ' . dir
+    return 'grep! ' . opt . ' ' . pattern . filter
 endfunction
 
 "*******************************************************
 " make ripgrep command
 "*******************************************************
-function! s:make_cmd_ripgrep() abort
+function! s:make_rg_cmd() abort
 	let opt = ''
 	" Word Search
 	let opt .= and(s:gr["OPT"], 0x1) ? ' -w' : ''
@@ -446,13 +437,13 @@ function! s:run_grep() abort
 	" Run grep
 	let start_time = reltime()
 	if g:GR_GrepCommand == 'rg'
-		silent! execute s:make_cmd_ripgrep()
+		silent! execute s:make_rg_cmd()
 	elseif g:GR_GrepCommand == 'grep'
-		silent! execute s:make_cmd_grep()
+		silent! execute s:make_grep_cmd()
 	elseif g:GR_GrepCommand == 'git grep'
-		silent! execute s:make_cmd_git_grep()
+		silent! execute s:make_gitgrep_cmd()
 	else
-		silent! execute s:make_cmd_vimgrep()
+		silent! execute s:make_vimgrep_cmd()
 	endif
 	let proc_time = substitute(reltimestr(reltime(start_time)), " ", "", "g")
 
