@@ -41,6 +41,14 @@ local function change_grepprg()
 end
 
 ------------------------------------------------------------
+-- コマンドラインをクリア
+------------------------------------------------------------
+local function clear_commandline()
+	vim.cmd('redraw')
+	vim.cmd('echo ""')
+end
+
+------------------------------------------------------------
 -- オプション設定状態を返却
 ------------------------------------------------------------
 local function is_enable(v)
@@ -134,24 +142,10 @@ local function make_menu()
 	table.insert(menu, " (w) Word search      " .. is_enable("W") .. " ")
 	table.insert(menu, " (c) Case senstive    " .. is_enable("C") .. " ")
 	if grepprg == "ripgrep" then
-		table.insert(menu, " (2) Encoding         " .. (is_enable("E") ~= 0 and "sjis" or "utf8") .. " ")
+		table.insert(menu, " (e) Encoding         " .. (is_enable("E") == "*" and "sjis" or "utf8") .. " ")
 	end
 
 	return menu
-end
-
-----------------------------------------------------------------
--- folding
-----------------------------------------------------------------
-local function folding()
-	-- 未展開だったら何もしない
-	if expand.lnum == 0 then return end
-
-	-- カーソルを親に移動
-	vim.api.nvim_win_set_cursor(0, {expand.lnum, 0})
-
-	-- 折り畳みoff
-	expand.lnum = 0
 end
 
 ----------------------------------------------------------------
@@ -208,6 +202,7 @@ local function input_search_pattern()
 		if instr then
 			-- 改行コードを削除して更新
 			search_pattern = instr:gsub("[\r\n]", "")
+			clear_commandline()
 			render_menu()
 		end
 	end)
@@ -233,6 +228,7 @@ local function edit_start_directory(cb)
 
 	if vim.fn.isdirectory(dir) == 1 then
 		start_directory = vim.fn.fnamemodify(dir, ":p:h")
+		clear_commandline()
 		render_menu()
 	else
 		vim.api.nvim_echo({{ "Error: Directory " .. dir .. " doesn't exist", "WarningMsg" }}, false, {})
@@ -250,6 +246,7 @@ local function input_file_filter()
 			else
 				filter = instr:gsub("[\r\n]", "")
 			end
+			clear_commandline()
 			render_menu()
 		end
 	end)
@@ -275,19 +272,15 @@ end
 ----------------------------------------------------------------
 -- 選択処理
 ----------------------------------------------------------------
-local function on_select()
+local function on_select(key)
 	local lnum = vim.fn.line(".")
 
 	if expand.lnum == 0 then
 		if lnum == 1 then		-- Search pattern
-			expand.lnum = lnum
-			expand.length = #search_pattern_old
-			vim.api.nvim_win_set_cursor(0, {lnum + 1, 0})
+			input_search_pattern()
 
 		elseif lnum == 2 then	-- Start directory
-			expand.lnum = lnum
-			expand.length = #start_directory_old
-			vim.api.nvim_win_set_cursor(0, {lnum + 1, 0})
+			edit_start_directory()
 
 		elseif lnum == 4 then	-- File filter
 			input_file_filter()
@@ -302,7 +295,7 @@ local function on_select()
 			set_option("E")
 		end
 
-	else
+	elseif key == "CR" then
 		if lnum <= expand.lnum or lnum > expand.lnum + expand.length then
 			return
 		end
@@ -319,6 +312,39 @@ local function on_select()
 	end
 end
 
+----------------------------------------------------------------
+-- 履歴の表示
+----------------------------------------------------------------
+local function open_history()
+	local lnum = vim.fn.line(".")
+
+	-- 既に履歴を表示中、または検索パターン、検索開始ディレクトリ以外の場合は何もしない
+	if expand.lnum ~= 0 or lnum > 2 then
+		return
+	end
+
+	expand.lnum = lnum
+	expand.length = (lnum == 1 and #search_pattern_old or #start_directory_old)
+
+	-- カーソルを履歴のトップに移動
+	vim.api.nvim_win_set_cursor(0, {lnum + 1, 0})
+end
+
+----------------------------------------------------------------
+-- 履歴の非表示
+----------------------------------------------------------------
+local function close_history()
+	-- 履歴を表示中でない場合は何もしない
+	if expand.lnum == 0 then
+		return
+	end
+
+	-- カーソルを親に移動
+	vim.api.nvim_win_set_cursor(0, {expand.lnum, 0})
+
+	-- 折り畳みoff
+	expand.lnum = 0
+end
 ------------------------------------------------------------
 -- Run grep
 ------------------------------------------------------------
@@ -370,6 +396,13 @@ end
 -- ウィンドウの終了
 ------------------------------------------------------------
 local function close_window()
+	-- 履歴を開いている場合は、履歴を閉じるだけ
+	if expand.lnum ~= 0 then
+		close_history()
+		render_menu()
+		return
+	end
+
 	if W.win and vim.api.nvim_win_is_valid(W.win) then
 		vim.api.nvim_win_close(W.win, true)
 	end
@@ -423,15 +456,17 @@ local function open_window()
 	end
 	map("q", function() close_window() end)
 	map("g", function() close_window() run_grep() end)
-	map("l", function() on_select() render_menu() end)
-	map("h", function() folding() render_menu() end)
+	map("l", function() on_select("l") render_menu() end)
+	map("<CR>", function() on_select("CR") render_menu() end)
+	map("J", function() open_history() render_menu() end)
+	map("K", function() close_history() render_menu() end)
 	map("G", function() change_grepprg() render_menu() end)
 	map("s", function() input_search_pattern() end)
 	map("d", function() edit_start_directory() end)
 	map("f", function() input_file_filter() end)
 	map("w", function() set_option("W") render_menu() end)
 	map("c", function() set_option("C") render_menu() end)
-	map("2", function() set_option("E") render_menu() end)
+	map("e", function() set_option("E") render_menu() end)
 	map("k", function() on_cursor("up") end)
 	map("j", function() on_cursor("down") end)
 end
