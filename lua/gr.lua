@@ -444,6 +444,13 @@ local function open_window()
 	vim.api.nvim_win_set_option(W.win, "cursorline", true)
 	vim.api.nvim_buf_set_option(W.buf, 'bufhidden', 'delete')
 
+	-- フォーカスが外れたら自動で閉じる
+	vim.api.nvim_create_autocmd("WinLeave", {
+		buffer = W.buf,
+		once = true,    -- 1回発動したらこの設定を削除
+		callback = function() close_window() end,
+	})
+
 	-- set highlight
 	set_highlight()
 
