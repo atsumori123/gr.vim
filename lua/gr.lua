@@ -318,8 +318,9 @@ end
 local function open_history()
 	local lnum = vim.fn.line(".")
 
-	-- 既に履歴を表示中、または検索パターン、検索開始ディレクトリ以外の場合は何もしない
+	-- 既に履歴を表示中、または検索パターン、検索開始ディレクトリ以外の場合
 	if expand.lnum ~= 0 or lnum > 2 then
+		on_select("CR")
 		return
 	end
 
@@ -463,10 +464,9 @@ local function open_window()
 	end
 	map("q", function() close_window() end)
 	map("g", function() close_window() run_grep() end)
-	map("l", function() on_select("l") render_menu() end)
 	map("<CR>", function() on_select("CR") render_menu() end)
-	map("J", function() open_history() render_menu() end)
-	map("K", function() close_history() render_menu() end)
+	map("l", function() open_history() render_menu() end)
+	map("h", function() close_history() render_menu() end)
 	map("G", function() change_grepprg() render_menu() end)
 	map("s", function() input_search_pattern() end)
 	map("d", function() edit_start_directory() end)
@@ -538,6 +538,7 @@ function M.setup(user_conf)
 
 	init_directory()
 	cmd.set_grepprg(grepprg)
+	vim.g.GR_GrepCommand = grepprg
 	setup_commands()
 end
 
