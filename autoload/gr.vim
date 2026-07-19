@@ -14,14 +14,15 @@ endif
 "*******************************************************
 function! s:make_main_menu() abort
 	let menu = []
-	call add(menu, "(s) Search patterni   ".s:search_pattern)
-	call add(menu, "(d) Directory         ".s:start_directory)
+	call add(menu, "s. Search pattern   ".s:search_pattern)
+	call add(menu, "d. Directory        ".s:start_directory)
 	call add(menu, "")
-	call add(menu, "(f) File filter       ".s:gr["FILTER"])
-	call add(menu, "(w) Word search       ".(and(s:gr["OPT"], 0x01) ? "*" : ""))
-	call add(menu, "(c) Case sensitive    ".(and(s:gr["OPT"], 0x02) ? "*" : ""))
+	call add(menu, "f. File filter      ".s:gr["FILTER"])
+	call add(menu, "w. Word search      ".(and(s:gr["OPT"], 0x01) ? "*" : ""))
+	call add(menu, "i. Ignore case      ".(and(s:gr["OPT"], 0x02) ? "*" : ""))
+	call add(menu, "h. Hilight          ".(and(s:gr["OPT"], 0x04) ? "*" : ""))
 	if g:GR_GrepCommand == 'rg'
-		call add(menu, "(0) Encording         ".(and(s:gr["OPT"], 0x10) ? "sijs" : "utf8"))
+		call add(menu, "1. Encording        ".(and(s:gr["OPT"], 0x10) ? "sijs" : "utf8"))
 	endif
 
 	return menu
@@ -33,21 +34,21 @@ endfunction
 function! s:open_main_popup(menu) abort
 	let output = []
 	for v in a:menu
-		call add(output, {'text':v, 'props':[#{col: 1, length: 21, type: "gr"}]})
+		call add(output, {'text':v, 'props':[#{col: 1, length: 20, type: "gr"}]})
 	endfor
 
 	let opts = {
-			\ 'border': [1,1,1,1],
-			\ 'borderchars': ['─', '│', '─', '│', '┌', '┐', '┘', '└'],
-			\ 'padding': [1,2,1,2],
-			\ 'minwidth':50,
-			\ 'cursorline': 1,
-			\ 'mapping': v:false,
-			\ 'title': ' (G) '.g:GR_GrepCommand.' ',
-			\ 'filter': function('s:main_menu_filter'),
-			\ 'callback': function('s:main_menu_callback'),
-			\ 'filtermode': 'n',
-			\ 'zindex': 1
+			\ 'border'		: [1,1,1,1],
+			\ 'borderchars'	: has('unix') ? [] : ['─','│','─','│','┌','┐','┘','└'],
+			\ 'padding'		: [1,2,1,2],
+			\ 'minwidth'	: 50,
+			\ 'cursorline'	: 1,
+			\ 'mapping'		: v:false,
+			\ 'title'		: ' G. '.g:GR_GrepCommand.' ',
+			\ 'filter'		: function('s:main_menu_filter'),
+			\ 'callback'	: function('s:main_menu_callback'),
+			\ 'filtermode'	: 'n',
+			\ 'zindex'		: 1
 			\ }
 
 	let s:main_popup_winid = popup_menu(output, opts)
@@ -59,11 +60,11 @@ endfunction
 function! s:update_main_popup(winid) abort
 	let output = []
 	for v in s:make_main_menu()
-		call add(output, {'text':v, 'props':[#{col: 1, length: 21, type: "gr"}]})
+		call add(output, {'text':v, 'props':[#{col: 1, length: 20, type: "gr"}]})
 	endfor
 
 	call popup_settext(a:winid, output)
-	call popup_setoptions(a:winid, {'title' : ' (G) '.g:GR_GrepCommand.' '})
+	call popup_setoptions(a:winid, {'title' : ' G. '.g:GR_GrepCommand.' '})
 endfunction
 
 "*******************************************************
@@ -88,7 +89,7 @@ function! s:main_menu_filter(winid, key) abort
 
 	elseif a:key ==# 'G'
 		" Change grepprg
-		call s:change_grepprg()
+		call gr#grepcmd#change_grepprg()
 		call s:update_main_popup(a:winid)
 		return 1
 
@@ -136,13 +137,19 @@ function! s:main_menu_filter(winid, key) abort
 		call s:update_main_popup(a:winid)
 		return 1
 
-	elseif a:key ==# 'c' || unqkey ==# '6l'
-		" Search option (Case-senstive)
+	elseif a:key ==# 'i' || unqkey ==# '6l'
+		" Search option (Ignore case)
 		call s:set_grep_option(0x02)
 		call s:update_main_popup(a:winid)
 		return 1
 
-	elseif a:key ==# '2' || unqkey ==# '8l'
+	elseif a:key ==# 'h' || unqkey ==# '7l'
+		" hlsearch option
+		call s:set_grep_option(0x04)
+		call s:update_main_popup(a:winid)
+		return 1
+
+	elseif a:key ==# '1' || unqkey ==# '8l'
 		" Encording
 		call s:set_grep_option(0x10)
 		call s:update_main_popup(a:winid)
@@ -168,15 +175,15 @@ endfunction
 "*******************************************************
 function! s:open_sub_popup(title, menu) abort
 	let opts = {
-			\ 'border': [1,1,1,1],
-			\ 'borderchars': ['─', '│', '─', '│', '┌', '┐', '┘', '└'],
-			\ 'padding': [1,2,1,2],
-			\ 'cursorline': 1,
-			\ 'mapping': v:false,
-			\ 'title': ' '.a:title.' ',
-			\ 'filter': function('s:sub_menu_filter'),
-			\ 'callback': function('s:sub_menu_callback'),
-			\ 'zindex': 2
+			\ 'border'		: [1,1,1,1],
+			\ 'borderchars'	: has('unix') ? [] : ['─','│','─','│','┌','┐','┘','└'],
+			\ 'padding'		: [1,2,1,2],
+			\ 'cursorline'	: 1,
+			\ 'mapping'		: v:false,
+			\ 'title'		: ' '.a:title.' ',
+			\ 'filter'		: function('s:sub_menu_filter'),
+			\ 'callback'	: function('s:sub_menu_callback'),
+			\ 'zindex'		: 2
 			\ }
 
 	let s:sub_popup_winid = popup_menu(a:menu, opts)
@@ -265,143 +272,6 @@ function! s:set_grep_option(opt) abort
 endfunction
 
 "*******************************************************
-" Change grepprg
-"*******************************************************
-function! s:change_grepprg() abort
-	" vimgrep --> grep"
-	if g:GR_GrepCommand == 'internal'
-		let g:GR_GrepCommand = 'grep'
-		set grepprg=grep\ -nHR\ --binary-files=without-match
-		" -n : 行番号を表示
-		" -H : ファイル名を表示
-		" -R : 指定ディレクトリ以下を再帰的に検索
-		" -F-: 検索語を正規表現ではなく、ただの文字列として扱う
-		" --binary-files=without-match : バイナリファイルを検索対象から除外する
-		set grepformat=%f:%l:%m
-
-	" grep --> git grep"
-	elseif g:GR_GrepCommand == 'grep'
-		let g:GR_GrepCommand = 'git grep'
-		set grepprg=git\ grep\ -nI\ --no-color
-		" -n : 行番号を表示
-		" -I : バイナリファイルを除外する
-		" -F-: 検索語を正規表現ではなく、ただの文字列として扱う
-		" ---no-color : 出力の色付けを無効にする
-		" --full-name : カレントディレクトリではなく、Gitリポジトリのルートからの相対パスでファイル名を表示する
-		set grepformat=%f:%l:%m
-
-	" git grep --> ripgrep"
-	elseif g:GR_GrepCommand == 'git grep'
-		let g:GR_GrepCommand='rg'
-		set grepprg=rg\ --vimgrep\ --hidden
-		set grepformat=%f:%l:%m
-
-	" ripgrep --> vimgrep"
-	else
-		let g:GR_GrepCommand = 'rg'
-		let g:GR_GrepCommand='internal'
-		set grepprg=internal
-		set grepformat=%f:%l:%m,%f:%l%m,%f\ \ %l%m
-	endif
-endfunction
-
-"*******************************************************
-" make vimgrep command
-"*******************************************************
-function! s:make_vimgrep_cmd() abort
-	" 制御コードをエスケープする
-	let pattern = escape(s:search_pattern, '.^$*[]~\(){}+?')
-
-	let cmd = 'vimgrep! '
-	" Word Search
-	let cmd .= and(s:gr["OPT"], 0x1) ? '/\<'.pattern : '/'.pattern
-	" Case-senstive
-	let cmd .= and(s:gr["OPT"], 0x2) ? '\C' : '\c'
-	" Word Search
-	let cmd .= and(s:gr["OPT"], 0x1) ? '\>/j ' : '/j '
-	" Start search directory
-	let cmd .= s:start_directory
-	" File filter
-	let cmd .= '/ **/*.'.substitute(s:gr["FILTER"], ",", " **/*.", "g")
-
-	return cmd
-endfunction
-
-"*******************************************************
-" make grep command
-"*******************************************************
-function! s:make_grep_cmd() abort
-	let opt = ''
-	" Word Search
-	let opt .= and(s:gr["OPT"], 0x1) ? ' -w' : ''
-	" Case-senstive
-	let opt .= and(s:gr["OPT"], 0x2) ? ' -F' : ' -i'
-
-	" Filter
-	if stridx(s:gr["FILTER"], ',') >= 0
-		let filter = " --include={*.".substitute(s:gr["FILTER"], ",", ",*.", "g")."}"
-	elseif s:gr["FILTER"] != '*'
-		let filter = ' --include=' . shellescape('*.' . s:gr["FILTER"])
-	else
-		let filter = ''
-	endif
-
-	let pattern = shellescape(s:search_pattern)
-	let dir		= shellescape(s:start_directory)
-
-	return 'grep! ' . opt . filter . ' -- ' . pattern . ' ' . dir
-endfunction
-
-"*******************************************************
-" make grep git grep
-"*******************************************************
-function! s:make_gitgrep_cmd() abort
-	let opt = ''
-	"Word Search
-	let opt .= and(s:gr["OPT"], 0x1) ? ' -w' : ''
-	"Case-senstive
-	let opt .= and(s:gr["OPT"], 0x2) ? ' -F' : ' -i'
-
-	" Filter
-	let filter = ''
-	if s:gr["FILTER"] != '*'
-		let separator = has('unix') ? '/' : '\'
-		let s = split(s:gr["FILTER"], ',')
-		for extension in s
-			let  filter.= ' ' . s:gr["DIR"][0] . separator . '*.' . extension
-		endfor
-	els
-		let filter .= ' ' . s:gr["DIR"][0]
-	endif
-	let filter = filter ==# '' ? '' : ' -- ' . filter
-
-	let pattern = shellescape(s:search_pattern)
-
-    return 'grep! ' . opt . ' ' . pattern . filter
-endfunction
-
-"*******************************************************
-" make ripgrep command
-"*******************************************************
-function! s:make_rg_cmd() abort
-	let opt = ''
-	" Word Search
-	let opt .= and(s:gr["OPT"], 0x1) ? ' -w' : ''
-	" Case-senstive
-	let opt .= and(s:gr["OPT"], 0x2) ? '' : ' -i'
-	" Disable Regular expressions
-	let opt .= and(s:gr["OPT"], 0x8) ? '' : ' -F'
-	" Encording(sjis/utf-8)
-	let opt .= and(s:gr["OPT"], 0x10) ? ' -E sjis' : ' -E utf8'
-
-	let pattern = shellescape(s:search_pattern)
-	let glob	= shellescape('*.{' . s:gr['FILTER'] . '}')
-	let dir		= shellescape(s:start_directory)
-
-	return 'grep! ' . opt . ' -g ' . glob . ' -e ' . pattern . ' ' . dir
-endfunction
-
-"*******************************************************
 " Update history
 "*******************************************************
 function! s:update_history(list, item) abort
@@ -436,15 +306,7 @@ function! s:run_grep() abort
 
 	" Run grep
 	let start_time = reltime()
-	if g:GR_GrepCommand == 'rg'
-		silent! execute s:make_rg_cmd()
-	elseif g:GR_GrepCommand == 'grep'
-		silent! execute s:make_grep_cmd()
-	elseif g:GR_GrepCommand == 'git grep'
-		silent! execute s:make_gitgrep_cmd()
-	else
-		silent! execute s:make_vimgrep_cmd()
-	endif
+	silent! execute gr#grepcmd#grep_command(s:search_pattern, s:start_directory, s:gr['FILTER'], s:gr['OPT'])
 	let proc_time = substitute(reltimestr(reltime(start_time)), " ", "", "g")
 
 	" If there is a hit as a result of the search, display the QuickFix and set it to be rewritable.
@@ -454,6 +316,11 @@ function! s:run_grep() abort
 		set modifiable
 		set nowrap
 		echo len(getqflist())." hits.  (".proc_time." sec)"
+
+		if and(s:gr["OPT"], 0x4)
+			let @/ = and(s:gr["OPT"], 0x1) ? '\<' . s:search_pattern . '\>' : s:search_pattern 
+			call matchadd('Search', @/)
+		endif
 	else
 		redraw!
 		echo "Search pattern not found.  (".proc_time." sec)"
@@ -470,7 +337,7 @@ function! gr#start(range, start, end) abort
 		let s:gr["PATTERN"] = ["", "", "", "", ""]
 		let s:gr["DIR"] = [current_dir, getcwd(), getcwd(), getcwd(), current_dir]
 		let s:gr["FILTER"] = 'c,cpp'
-		let s:gr["OPT"] = 0x03
+		let s:gr["OPT"] = 0x05
 	endif
 
 	if a:range
