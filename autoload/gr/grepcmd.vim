@@ -10,11 +10,11 @@ function! s:make_vimgrep_cmd(search_pattern, start_directory, filter, option) ab
 
 	let cmd = 'vimgrep! '
 	" Word Search
-	let cmd .= and(a:option, 0x1) ? '/\<' . p : '/'. p
+	let cmd .= gr#is_opt('word') ? '/\<' . p : '/'. p
 	" Ignore case
-	let cmd .= and(a:option, 0x2) ? '\c' : '\C'
+	let cmd .= gr#is_opt('ignorecase') ? '\c' : '\C'
 	" Word Search
-	let cmd .= and(a:option, 0x1) ? '\>/j ' : '/j '
+	let cmd .= gr#is_opt('word') ? '\>/j ' : '/j '
 	" Start search directory
 	let cmd .= a:start_directory
 	" File filter
@@ -29,9 +29,9 @@ endfunction
 function! s:make_grep_cmd(search_pattern, start_directory, filter, option) abort
 	let o = ''
 	" Word Search
-	let o .= and(a:option, 0x1) ? ' -w' : ''
+	let o .= gr#is_opt('word') ? ' -w' : ''
 	" Ignore case
-	let o .= and(a:option, 0x2) ? ' -i' : ' -F'
+	let o .= gr#is_opt('ignorecase') ? ' -i' : ' -F'
 
 	" Filter
 	if stridx(a:filter, ',') >= 0
@@ -54,9 +54,9 @@ endfunction
 function! s:make_gitgrep_cmd(search_pattern, start_directory, filter, option) abort
 	let o = ''
 	"Word Search
-	let o .= and(a:option, 0x1) ? ' -w' : ''
+	let o .= gr#is_opt('word') ? ' -w' : ''
 	" Ignore case
-	let o .= and(a:option, 0x2) ? ' -i' : ' -F'
+	let o .= gr#is_opt('ignorecase') ? ' -i' : ' -F'
 
 	" Filter
 	let f = ''
@@ -82,11 +82,11 @@ endfunction
 function! s:make_rg_cmd(search_pattern, start_directory, filter, option) abort
 	let o = ''
 	" Word Search
-	let o .= and(a:option, 0x1) ? ' -w' : ''
+	let o .= gr#is_opt('word') ? ' -w' : ''
 	" Ignore case
-	let o .= and(a:option, 0x2) ? ' -i' : ''
+	let o .= gr#is_opt('ignorecase') ? ' -i' : ''
 	" Encording(sjis/utf-8)
-	let o .= and(a:option, 0x10) ? ' -E sjis' : ' -E utf8'
+	let o .= gr#is_opt('encording') ? ' -E sjis' : ' -E utf8'
 
 	let p = shellescape(a:search_pattern)
 	let f = shellescape('*.{' . a:option . '}')
