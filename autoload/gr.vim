@@ -9,20 +9,43 @@ if empty(prop_type_get('gr'))
 	call prop_type_add('gr', {'highlight': 'Identifier'})
 endif
 
+"-------------------------------------------------------
+" set_property
+"-------------------------------------------------------
+function! s:set_property(v, len) abort
+	return {'text': a:v, 'props': [#{col: 1, length: a:len, type: 'gr'}]}
+endfunction
+
 "*******************************************************
 " Make main menu
 "*******************************************************
 function! s:make_main_menu() abort
 	let menu = []
-	call add(menu, "s. Search pattern   ".s:search_pattern)
-	call add(menu, "d. Directory        ".s:start_directory)
-	call add(menu, "")
-	call add(menu, "f. File filter      ".s:gr["FILTER"])
-	call add(menu, "w. Word search      ".(and(s:gr["OPT"], 0x01) ? "*" : ""))
-	call add(menu, "i. Ignore case      ".(and(s:gr["OPT"], 0x02) ? "*" : ""))
-	call add(menu, "h. Hilight          ".(and(s:gr["OPT"], 0x04) ? "*" : ""))
-	if g:GR_GrepCommand == 'rg'
-		call add(menu, "1. Encording        ".(and(s:gr["OPT"], 0x10) ? "sijs" : "utf8"))
+
+	" 検索パターン
+	call add(menu, s:set_property('p. ' . s:search_pattern, 2))
+
+	" 検索開始ディレクトリ
+	call add(menu, s:set_property('d. ' . s:start_directory, 2))
+
+	" 検索フィルタ
+	call add(menu, s:set_property('f. ' . s:gr.search_filter, 2))
+
+	" 区切り
+	call add(menu, s:set_property("", 0))
+
+	" 単語検索
+	call add(menu, s:set_property(printf("%-15s%s", 'w. Word', and(s:gr.opt, 0x01) ? "*" : ""), 15))
+
+	" 大文字/小文字
+	call add(menu, s:set_property(printf("%-15s%s", 'i. Ignorecase', and(s:gr.opt, 0x02) ? "*" : ""), 15))
+
+	" 検索パターンのハイライト
+	call add(menu, s:set_property(printf("%-15s%s", '1. Highlight', and(s:gr.opt, 0x04) ? "*" : ""), 15))
+
+	" エンコード(rgのみ)
+	if g:gr_grep_command ==# 'rg'
+		call add(menu, s:set_property(printf("%-15s%s", '2. Encoding', and(s:gr.opt, 0x10) ? "*" : ""), 15))
 	endif
 
 	return menu
@@ -32,11 +55,6 @@ endfunction
 " Open main popup
 "*******************************************************
 function! s:open_main_popup(menu) abort
-	let output = []
-	for v in a:menu
-		call add(output, {'text':v, 'props':[#{col: 1, length: 20, type: "gr"}]})
-	endfor
-
 	let opts = {
 			\ 'border'		: [1,1,1,1],
 			\ 'borderchars'	: has('unix') ? [] : ['─','│','─','│','┌','┐','┘','└'],
@@ -44,27 +62,24 @@ function! s:open_main_popup(menu) abort
 			\ 'minwidth'	: 50,
 			\ 'cursorline'	: 1,
 			\ 'mapping'		: v:false,
-			\ 'title'		: ' G. '.g:GR_GrepCommand.' ',
+			\ 'title'		: ' G. '.g:gr_grep_command.' ',
 			\ 'filter'		: function('s:main_menu_filter'),
 			\ 'callback'	: function('s:main_menu_callback'),
 			\ 'filtermode'	: 'n',
 			\ 'zindex'		: 1
 			\ }
 
-	let s:main_popup_winid = popup_menu(output, opts)
+	let s:main_popup_winid = popup_menu(a:menu, opts)
 endfunction
 
 "*******************************************************
 " Update popup menu
 "*******************************************************
 function! s:update_main_popup(winid) abort
-	let output = []
-	for v in s:make_main_menu()
-		call add(output, {'text':v, 'props':[#{col: 1, length: 20, type: "gr"}]})
-	endfor
+	let output = s:make_main_menu()
 
 	call popup_settext(a:winid, output)
-	call popup_setoptions(a:winid, {'title' : ' G. '.g:GR_GrepCommand.' '})
+	call popup_setoptions(a:winid, {'title' : ' G. '.g:gr_grep_command.' '})
 endfunction
 
 "*******************************************************
@@ -101,7 +116,7 @@ function! s:main_menu_filter(winid, key) abort
 
 	elseif unqkey ==# '1l'
 		" 検索パターン履歴
-		call s:open_sub_popup('Search pattern', s:gr['PATTERN'])
+		call s:open_sub_popup('Search pattern', s:gr.old_pattern)
 		return 1
 
 	elseif a:key ==# 'd' || unqkey ==# '2e'
@@ -112,21 +127,21 @@ function! s:main_menu_filter(winid, key) abort
 
 	elseif unqkey ==# '2l'
 		" 検索パターン履歴
-		call s:open_sub_popup('Directory', s:gr['DIR'])
+		call s:open_sub_popup('Directory', s:gr.old_directory)
 		return 1
 
-	elseif unqkey ==# '2j' || unqkey ==# '2\<DOWN>'
+	elseif unqkey ==# '3j' || unqkey ==# '3\<DOWN>'
 		" 空白行をスキップ (2行目で'j')
 		call win_execute(a:winid, 'normal! 2j')
 		return 1
 
-	elseif a:key ==# 'f' || unqkey ==# '4l'
+	elseif a:key ==# 'f' || unqkey ==# '3l'
 		" file filter
 		call s:input_file_filter()
 		call s:update_main_popup(a:winid)
 		return 1
 
-	elseif unqkey ==# '4k'
+	elseif unqkey ==# '5k'
 		" 空白行をスキップ (4行目で'k')
 		call win_execute(a:winid, 'normal! 2k')
 		return 1
@@ -205,9 +220,9 @@ function! s:sub_menu_filter(winid, key) abort
 		let lnum = getwinvar(a:winid, 'lnum', 0)
 
 		if title =~ 'Pattern'
-			let s:search_pattern = s:gr["PATTERN"][lnum - 1]
+			let s:search_pattern = s:gr.old_pattern[lnum - 1]
 		else
-			let s:start_directory = s:gr["DIR"][lnum - 1]
+			let s:start_directory = s:gr.old_directory[lnum - 1]
 		endif
 
 		call popup_close(a:winid, -1)
@@ -261,14 +276,14 @@ endfunction
 function! s:input_file_filter() abort
 	let instr = input('Search in files matching pattern: ')
 	echo "\r"
-	let s:gr["FILTER"] = empty(instr) ? '*' : instr
+	let s:gr.search_filter = empty(instr) ? '*' : instr
 endfunction
 
 "*******************************************************
 " Set grep option
 "*******************************************************
 function! s:set_grep_option(opt) abort
-	let s:gr["OPT"] = xor(s:gr["OPT"], a:opt)
+	let s:gr.opt = xor(s:gr.opt, a:opt)
 endfunction
 
 "*******************************************************
@@ -295,8 +310,8 @@ function! s:run_grep() abort
 	endif
 
 	" 新しいものは履歴の先頭に追加し、古いものを捨てる
-	let s:gr["PATTERN"] = s:update_history(s:gr["PATTERN"], s:search_pattern)
-	let s:gr["DIR"] = s:update_history(s:gr["DIR"], s:start_directory)
+	let s:gr.old_pattern = s:update_history(s:gr.old_pattern, s:search_pattern)
+	let s:gr.old_directory = s:update_history(s:gr.old_directory, s:start_directory)
 
 	" >>> grep executing >>>.
 	echohl Search | echomsg ">>> grep executing >>>" | echohl None
@@ -306,7 +321,7 @@ function! s:run_grep() abort
 
 	" Run grep
 	let start_time = reltime()
-	silent! execute gr#grepcmd#grep_command(s:search_pattern, s:start_directory, s:gr['FILTER'], s:gr['OPT'])
+	silent! execute gr#grepcmd#grep_command(s:search_pattern, s:start_directory, s:gr.search_filter, s:gr.opt)
 	let proc_time = substitute(reltimestr(reltime(start_time)), " ", "", "g")
 
 	" If there is a hit as a result of the search, display the QuickFix and set it to be rewritable.
@@ -317,8 +332,8 @@ function! s:run_grep() abort
 		set nowrap
 		echo len(getqflist())." hits.  (".proc_time." sec)"
 
-		if and(s:gr["OPT"], 0x4)
-			let @/ = and(s:gr["OPT"], 0x1) ? '\<' . s:search_pattern . '\>' : s:search_pattern 
+		if and(s:gr.opt, 0x4)
+			let @/ = and(s:gr.opt, 0x1) ? '\<' . s:search_pattern . '\>' : s:search_pattern 
 			call matchadd('Search', @/)
 		endif
 	else
@@ -334,23 +349,28 @@ function! gr#start(range, start, end) abort
 	let current_dir = expand('%:p:h')
 	if !exists('s:gr')
 		let s:gr = {}
-		let s:gr["PATTERN"] = ["", "", "", "", ""]
-		let s:gr["DIR"] = [current_dir, getcwd(), getcwd(), getcwd(), current_dir]
-		let s:gr["FILTER"] = 'c,cpp'
-		let s:gr["OPT"] = 0x05
+		let s:gr.old_pattern	= ["", "", "", "", ""]
+		let s:gr.old_directory	= [current_dir, getcwd(), getcwd(), getcwd(), current_dir]
+		let s:gr.search_filter	= 'c,cpp'
+		let s:gr.opt = 0x05
 	endif
 
-	if a:range
+	if a:range && mode() =~# '^[vV]' 
+		" ビジュアルモードで範囲選択している場合は、選択部分をgrep対象にする
 		let temp = @@
 		silent normal gvy
 		let s:search_pattern = @@
 		let @@ = temp
 	else
+		" 範囲選択されていない場合は、単語をgrep対象にする
 		let s:search_pattern = expand('<cword>')
 	endif
 
-	let s:start_directory = s:gr["DIR"][0]
-	let s:gr["DIR"][4] = current_dir
+	" 初期検索開始ディレクトリは履歴トップのディレクトリ
+	let s:start_directory = s:gr.old_directory[0]
+
+	" 初期検索フィルタは履歴トップのフィルタ
+	let s:gr.old_directory[4] = current_dir
 
 	call s:open_main_popup(s:make_main_menu())
 endfunction

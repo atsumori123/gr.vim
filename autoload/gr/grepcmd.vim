@@ -79,14 +79,12 @@ endfunction
 "-------------------------------------------------------
 " make ripgrep command
 "-------------------------------------------------------
-function! s:make_rg_cmd() abort
+function! s:make_rg_cmd(search_pattern, start_directory, filter, option) abort
 	let o = ''
 	" Word Search
 	let o .= and(a:option, 0x1) ? ' -w' : ''
 	" Ignore case
 	let o .= and(a:option, 0x2) ? ' -i' : ''
-	" Disable Regular expressions
-	let o .= and(a:option, 0x8) ? '' : ' -F'
 	" Encording(sjis/utf-8)
 	let o .= and(a:option, 0x10) ? ' -E sjis' : ' -E utf8'
 
@@ -102,8 +100,8 @@ endfunction
 "-------------------------------------------------------
 function! gr#grepcmd#change_grepprg() abort
 	" vimgrep --> grep"
-	if g:GR_GrepCommand == 'internal'
-		let g:GR_GrepCommand = 'grep'
+	if g:gr_grep_command == 'internal'
+		let g:gr_grep_command = 'grep'
 		set grepprg=grep\ -nHR\ --binary-files=without-match
 		" -n : 行番号を表示
 		" -H : ファイル名を表示
@@ -113,8 +111,8 @@ function! gr#grepcmd#change_grepprg() abort
 		set grepformat=%f:%l:%m
 
 	" grep --> git grep"
-	elseif g:GR_GrepCommand == 'grep'
-		let g:GR_GrepCommand = 'git grep'
+	elseif g:gr_grep_command == 'grep'
+		let g:gr_grep_command = 'git grep'
 		set grepprg=git\ grep\ -nI\ --no-color
 		" -n : 行番号を表示
 		" -I : バイナリファイルを除外する
@@ -124,15 +122,14 @@ function! gr#grepcmd#change_grepprg() abort
 		set grepformat=%f:%l:%m
 
 	" git grep --> ripgrep"
-	elseif g:GR_GrepCommand == 'git grep'
-		let g:GR_GrepCommand='rg'
+	elseif g:gr_grep_command == 'git grep'
+		let g:gr_grep_command='rg'
 		set grepprg=rg\ --vimgrep\ --hidden
 		set grepformat=%f:%l:%m
 
 	" ripgrep --> vimgrep"
 	else
-		let g:GR_GrepCommand = 'rg'
-		let g:GR_GrepCommand='internal'
+		let g:gr_grep_command='internal'
 		set grepprg=internal
 		set grepformat=%f:%l:%m,%f:%l%m,%f\ \ %l%m
 	endif
@@ -142,11 +139,11 @@ endfunction
 " Make grep command
 "-------------------------------------------------------
 function! gr#grepcmd#grep_command(search_pattern, start_directory, filter, option) abort
-	if g:GR_GrepCommand ==# "grep"
+	if g:gr_grep_command ==# "grep"
 		let Func = function('s:make_grep_cmd')
-	elseif g:GR_GrepCommand ==# "gitgrep"
+	elseif g:gr_grep_command ==# "gitgrep"
 		let Func = function('s:make_gitgrep_cmd')
-	elseif g:GR_GrepCommand ==# "rg"
+	elseif g:gr_grep_command ==# "rg"
 		let Func = function('s:make_rg_cmd')
 	else
 		let Func = function('s:make_vimgrep_cmd')
