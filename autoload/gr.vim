@@ -4,6 +4,7 @@ set cpoptions&vim
 let s:menu = []
 let s:m_id = ""
 let s:match_id = 0
+let s:match_winid = 0
 
 " gr用のハイライトグループを定義
 if empty(prop_type_get('gr'))
@@ -333,6 +334,19 @@ function! s:update_history() abort
 endfunction
 
 "-------------------------------------------------------
+" clear_match
+"-------------------------------------------------------
+function! s:clear_match() abort
+	if s:match_id != 0
+		if win_id2win(s:match_winid) != 0
+			call matchdelete(s:match_id, s:match_winid)
+		endif
+		let s:match_id = 0
+		let s:match_winid = 0
+	endif
+endfunction
+
+"-------------------------------------------------------
 " Run grep
 "-------------------------------------------------------
 function! s:run_grep() abort
@@ -363,6 +377,10 @@ function! s:run_grep() abort
 	" If there is a hit as a result of the search, display the QuickFix and set it to be rewritable.
 	if len(getqflist())
 		exe 'botright copen'
+		augroup gr_quickfix_match
+			autocmd!
+			autocmd BufWinLeave <buffer> call <SID>clear_match()
+		augroup END
 		redraw!
 		set modifiable
 		set nowrap
@@ -370,6 +388,7 @@ function! s:run_grep() abort
 
 		if gr#is_opt('h')
 			let @/ = gr#is_opt('w') ? '\<' . s:gr.p.value . '\>' : s:gr.p.value
+			let s:match_winid = win_getid()
 			let s:match_id = matchadd('Special', @/)
 		endif
 	else
