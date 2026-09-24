@@ -4,21 +4,21 @@ set cpoptions&vim
 "-------------------------------------------------------
 " make vimgrep command
 "-------------------------------------------------------
-function! s:make_vimgrep_cmd(search_pattern, start_directory, filter, option) abort
+function! s:make_vimgrep_cmd(search_pattern, start_directory, file_filter) abort
 	" 制御コードをエスケープする
 	let p = escape(a:search_pattern, '.^$*[]~\(){}+?')
 
 	let cmd = 'vimgrep! '
 	" Word Search
-	let cmd .= gr#is_opt('word') ? '/\<' . p : '/'. p
+	let cmd .= gr#is_opt('w') ? '/\<' . p : '/'. p
 	" Ignore case
-	let cmd .= gr#is_opt('ignorecase') ? '\c' : '\C'
+	let cmd .= gr#is_opt('i') ? '\c' : '\C'
 	" Word Search
-	let cmd .= gr#is_opt('word') ? '\>/j ' : '/j '
+	let cmd .= gr#is_opt('w') ? '\>/j ' : '/j '
 	" Start search directory
 	let cmd .= a:start_directory
 	" File filter
-	let cmd .= '/ **/*.'.substitute(a:filter, ",", " **/*.", "g")
+	let cmd .= '/ **/*.'.substitute(a:file_filter, ",", " **/*.", "g")
 
 	return cmd
 endfunction
@@ -26,18 +26,18 @@ endfunction
 "-------------------------------------------------------
 " make grep command
 "-------------------------------------------------------
-function! s:make_grep_cmd(search_pattern, start_directory, filter, option) abort
+function! s:make_grep_cmd(search_pattern, start_directory, file_filter) abort
 	let o = ''
 	" Word Search
-	let o .= gr#is_opt('word') ? ' -w' : ''
+	let o .= gr#is_opt('w') ? ' -w' : ''
 	" Ignore case
-	let o .= gr#is_opt('ignorecase') ? ' -i' : ' -F'
+	let o .= gr#is_opt('i') ? ' -i' : ' -F'
 
-	" Filter
-	if stridx(a:filter, ',') >= 0
-		let f = " --include={*.".substitute(a:filter, ",", ",*.", "g")."}"
-	elseif a:filter != '*'
-		let f = ' --include=' . shellescape('*.' . a:filter)
+	" File_Filter
+	if stridx(a:file_filter, ',') >= 0
+		let f = " --include={*.".substitute(a:file_filter, ",", ",*.", "g")."}"
+	elseif a:file_filter != '*'
+		let f = ' --include=' . shellescape('*.' . a:file_filter)
 	else
 		let f = ''
 	endif
@@ -51,18 +51,18 @@ endfunction
 "-------------------------------------------------------
 " make grep git grep
 "-------------------------------------------------------
-function! s:make_gitgrep_cmd(search_pattern, start_directory, filter, option) abort
+function! s:make_gitgrep_cmd(search_pattern, start_directory, file_filter) abort
 	let o = ''
 	"Word Search
-	let o .= gr#is_opt('word') ? ' -w' : ''
+	let o .= gr#is_opt('w') ? ' -w' : ''
 	" Ignore case
-	let o .= gr#is_opt('ignorecase') ? ' -i' : ' -F'
+	let o .= gr#is_opt('i') ? ' -i' : ' -F'
 
-	" Filter
+	" File filter
 	let f = ''
-	if a:filter != '*'
+	if a:file_filter != '*'
 		let sep = has('unix') ? '/' : '\'
-		let s = split(a:filter, ',')
+		let s = split(a:file_filter, ',')
 		for ext in s
 			let  f.= ' ' . a:start_directory . sep . '*.' . ext
 		endfor
@@ -79,20 +79,20 @@ endfunction
 "-------------------------------------------------------
 " make ripgrep command
 "-------------------------------------------------------
-function! s:make_rg_cmd(search_pattern, start_directory, filter, option) abort
-	let o = ''
-	" Word Search
-	let o .= gr#is_opt('word') ? ' -w' : ''
-	" Ignore case
-	let o .= gr#is_opt('ignorecase') ? ' -i' : ''
-	" Encording(sjis/utf-8)
-	let o .= gr#is_opt('encording') ? ' -E sjis' : ' -E utf8'
+function! s:make_rg_cmd(search_pattern, start_directory, file_filter) abort
+	" let o = ''
+	" " Word Search
+	" let o .= gr#is_opt('w') ? ' -w' : ''
+	" " Ignore case
+	" let o .= gr#is_opt('i') ? ' -i' : ''
+	" " Encording(sjis/utf-8)
+	" let o .= gr#is_opt('e') ? ' -E sjis' : ' -E utf8'
 
-	let p = shellescape(a:search_pattern)
-	let f = shellescape('*.{' . a:option . '}')
-	let d = shellescape(a:start_directory)
+	" let p = shellescape(a:search_pattern)
+	" let f = shellescape('*.{' . a:option . '}')
+	" let d = shellescape(a:start_directory)
 
-	return 'grep! ' . o . ' -g ' . f . ' -e ' . p . ' ' . d
+	" return 'grep! ' . o . ' -g ' . f . ' -e ' . p . ' ' . d
 endfunction
 
 "-------------------------------------------------------
@@ -138,7 +138,7 @@ endfunction
 "-------------------------------------------------------
 " Make grep command
 "-------------------------------------------------------
-function! gr#grepcmd#grep_command(search_pattern, start_directory, filter, option) abort
+function! gr#grepcmd#grep_command(search_pattern, start_directory, file_filter) abort
 	if g:gr_grep_command ==# "grep"
 		let Func = function('s:make_grep_cmd')
 	elseif g:gr_grep_command ==# "gitgrep"
@@ -149,7 +149,7 @@ function! gr#grepcmd#grep_command(search_pattern, start_directory, filter, optio
 		let Func = function('s:make_vimgrep_cmd')
 	end
 
-	return Func(a:search_pattern, a:start_directory, a:filter, a:option)
+	return Func(a:search_pattern, a:start_directory, a:file_filter)
 endfunction
 
 let &cpoptions = s:save_cpo
