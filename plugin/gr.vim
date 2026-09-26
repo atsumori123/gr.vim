@@ -1,18 +1,18 @@
+if exists('g:loaded_gr')
+	finish
+endif
+let g:loaded_gr = 1
+
 let s:save_cpo = &cpoptions
 set cpoptions&vim
 
-if exists('g:loaded_GR')
-	finish
-endif
-let g:loaded_GR = 1
-
 " Grep type
-if !exists('g:GR_GrepCommand')
-	let g:GR_GrepCommand = 'internal'
+if !exists('g:gr_grepprg')
+	let g:gr_grepprg = 'vim grep'
 endif
 
 " Set grepprg & grepformat
-if g:GR_GrepCommand == 'grep'
+if g:gr_grepprg == 'grep'
 	set grepprg=grep\ -nHR\ --binary-files=without-match
 	" -n : 行番号を表示
 	" -H : ファイル名を表示
@@ -20,7 +20,8 @@ if g:GR_GrepCommand == 'grep'
 	" -F-: 検索語を正規表現ではなく、ただの文字列として扱う
 	" --binary-files=without-match : バイナリファイルを検索対象から除外する
 	set grepformat=%f:%l:%m
-elseif g:GR_GrepCommand == 'git grep'
+
+elseif g:gr_grepprg == 'git grep'
 	set grepprg=git\ grep\ -nI\ --no-color
 	" -n : 行番号を表示
 	" -I : バイナリファイルを除外する
@@ -28,9 +29,11 @@ elseif g:GR_GrepCommand == 'git grep'
 	" ---no-color : 出力の色付けを無効にする
 	" --full-name : カレントディレクトリではなく、Gitリポジトリのルートからの相対パスでファイル名を表示する
 	set grepformat=%f:%l:%m
-elseif g:GR_GrepCommand == 'rg'
+
+elseif g:gr_grepprg == 'rip grep'
 	set grepprg=rg\ --vimgrep\ --hidden
 	set grepformat=%f:%l:%m
+
 else
 	set grepprg=internal
 	set grepformat=%f:%l:%m,%f:%l%m,%f\ \ %l%m
