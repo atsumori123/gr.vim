@@ -16,7 +16,7 @@ function! s:make_vimgrep_cmd(search_pattern, start_directory, file_filter) abort
 	" Word Search
 	let cmd .= gr#is_opt('w') ? '\>/j ' : '/j '
 	" Start search directory
-	let cmd .= a:start_directory
+	let cmd .= fnameescape(a:start_directory)
 	" File filter
 	let cmd .= '/ **/*.'.substitute(a:file_filter, ",", " **/*.", "g")
 
@@ -61,10 +61,10 @@ function! s:make_gitgrep_cmd(search_pattern, start_directory, file_filter) abort
 	" File filter
 	let f = ''
 	if a:file_filter != '*'
-		let sep = has('unix') ? '/' : '\'
+		let sep = has('unix') ? '/' : '/'
 		let s = split(a:file_filter, ',')
 		for ext in s
-			let  f.= ' ' . a:start_directory . sep . '*.' . ext
+			let  f .= ' ' . a:start_directory . sep . '*.' . ext
 		endfor
 	els
 		let f .= ' ' . a:start_directory
@@ -79,20 +79,20 @@ endfunction
 "-------------------------------------------------------
 " make ripgrep command
 "-------------------------------------------------------
-function! s:make_rg_cmd(search_pattern, start_directory, file_filter) abort
-	" let o = ''
-	" " Word Search
-	" let o .= gr#is_opt('w') ? ' -w' : ''
-	" " Ignore case
-	" let o .= gr#is_opt('i') ? ' -i' : ''
-	" " Encording(sjis/utf-8)
-	" let o .= gr#is_opt('e') ? ' -E sjis' : ' -E utf8'
+function! s:make_ripgrep_cmd(search_pattern, start_directory, file_filter) abort
+	let o = ''
+	" Word Search
+	let o .= gr#is_opt('w') ? ' -w' : ''
+	" Ignore case
+	let o .= gr#is_opt('i') ? ' -i' : ''
+	" Encording(sjis/utf-8)
+	let o .= gr#is_opt('e') ? ' -E sjis' : ' -E utf8'
 
-	" let p = shellescape(a:search_pattern)
-	" let f = shellescape('*.{' . a:option . '}')
-	" let d = shellescape(a:start_directory)
+	let p = shellescape(a:search_pattern)
+	let f = shellescape('*.{' . a:file_filter . '}')
+	let d = shellescape(a:start_directory)
 
-	" return 'grep! ' . o . ' -g ' . f . ' -e ' . p . ' ' . d
+	return 'grep! ' . o . ' -g ' . f . ' -e ' . p . ' ' . d
 endfunction
 
 "-------------------------------------------------------
@@ -100,8 +100,8 @@ endfunction
 "-------------------------------------------------------
 function! gr#grepcmd#change_grepprg() abort
 	" vimgrep --> grep"
-	if g:gr_grep_command == 'internal'
-		let g:gr_grep_command = 'grep'
+	if g:gr_grepprg == 'vim grep'
+		let g:gr_grepprg = 'grep'
 		set grepprg=grep\ -nHR\ --binary-files=without-match
 		" -n : 行番号を表示
 		" -H : ファイル名を表示
@@ -111,8 +111,8 @@ function! gr#grepcmd#change_grepprg() abort
 		set grepformat=%f:%l:%m
 
 	" grep --> git grep"
-	elseif g:gr_grep_command == 'grep'
-		let g:gr_grep_command = 'git grep'
+	elseif g:gr_grepprg == 'grep'
+		let g:gr_grepprg = 'git grep'
 		set grepprg=git\ grep\ -nI\ --no-color
 		" -n : 行番号を表示
 		" -I : バイナリファイルを除外する
@@ -122,14 +122,14 @@ function! gr#grepcmd#change_grepprg() abort
 		set grepformat=%f:%l:%m
 
 	" git grep --> ripgrep"
-	elseif g:gr_grep_command == 'git grep'
-		let g:gr_grep_command='rg'
+	elseif g:gr_grepprg == 'git grep'
+		let g:gr_grepprg='rip grep'
 		set grepprg=rg\ --vimgrep\ --hidden
 		set grepformat=%f:%l:%m
 
 	" ripgrep --> vimgrep"
 	else
-		let g:gr_grep_command='internal'
+		let g:gr_grepprg='vim grep'
 		set grepprg=internal
 		set grepformat=%f:%l:%m,%f:%l%m,%f\ \ %l%m
 	endif
@@ -138,13 +138,13 @@ endfunction
 "-------------------------------------------------------
 " Make grep command
 "-------------------------------------------------------
-function! gr#grepcmd#grep_command(search_pattern, start_directory, file_filter) abort
-	if g:gr_grep_command ==# "grep"
+function! gr#grepcmd#grep(search_pattern, start_directory, file_filter) abort
+	if g:gr_grepprg ==# "grep"
 		let Func = function('s:make_grep_cmd')
-	elseif g:gr_grep_command ==# "gitgrep"
+	elseif g:gr_grepprg ==# "git grep"
 		let Func = function('s:make_gitgrep_cmd')
-	elseif g:gr_grep_command ==# "rg"
-		let Func = function('s:make_rg_cmd')
+	elseif g:gr_grepprg ==# "rip grep"
+		let Func = function('s:make_ripgrep_cmd')
 	else
 		let Func = function('s:make_vimgrep_cmd')
 	end

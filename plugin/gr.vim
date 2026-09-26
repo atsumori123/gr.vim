@@ -7,12 +7,12 @@ let s:save_cpo = &cpoptions
 set cpoptions&vim
 
 " Grep type
-if !exists('g:gr_grep_command')
-	let g:gr_grep_command = 'internal'
+if !exists('g:gr_grepprg')
+	let g:gr_grepprg = 'vim grep'
 endif
 
 " Set grepprg & grepformat
-if g:gr_grep_command == 'grep'
+if g:gr_grepprg == 'grep'
 	set grepprg=grep\ -nHR\ --binary-files=without-match
 	" -n : 行番号を表示
 	" -H : ファイル名を表示
@@ -21,7 +21,7 @@ if g:gr_grep_command == 'grep'
 	" --binary-files=without-match : バイナリファイルを検索対象から除外する
 	set grepformat=%f:%l:%m
 
-elseif g:gr_grep_command == 'git grep'
+elseif g:gr_grepprg == 'git grep'
 	set grepprg=git\ grep\ -nI\ --no-color
 	" -n : 行番号を表示
 	" -I : バイナリファイルを除外する
@@ -30,7 +30,7 @@ elseif g:gr_grep_command == 'git grep'
 	" --full-name : カレントディレクトリではなく、Gitリポジトリのルートからの相対パスでファイル名を表示する
 	set grepformat=%f:%l:%m
 
-elseif g:gr_grep_command == 'rg'
+elseif g:gr_grepprg == 'rip grep'
 	set grepprg=rg\ --vimgrep\ --hidden
 	set grepformat=%f:%l:%m
 
