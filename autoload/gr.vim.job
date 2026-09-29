@@ -368,6 +368,77 @@ function! s:clear_match() abort
 	endif
 endfunction
 
+function! s:append_job_output(output, channel, message) abort
+	if type(a:message) == v:t_list
+		call extend(a:output, a:message)
+	else
+		call add(a:output, a:message)
+	endif
+endfunction
+
+function! s:wait_job(job, timeout) abort
+	let waited = 0
+	while job_status(a:job) ==# 'run'
+		if a:timeout >= 0 && waited >= a:timeout
+			return 0
+		endif
+		sleep 20m
+		let waited += 20
+	endwhile
+	return 1
+endfunction
+
+function! s:stop_job(job) abort
+	for signal in ['int', 'term', 'kill']
+		silent! call job_stop(a:job, signal)
+		try
+			call s:wait_job(a:job, 1000)
+		catch /^Vim:Interrupt$/
+			silent! call job_stop(a:job, 'kill')
+		endtry
+		if job_status(a:job) !=# 'run'
+			return
+		endif
+	endfor
+	while job_status(a:job) ==# 'run'
+		try
+			call s:wait_job(a:job, -1)
+		catch /^Vim:Interrupt$/
+			silent! call job_stop(a:job, 'kill')
+		endtry
+	endwhile
+endfunction
+
+function! s:run_grep_job(grep_command) abort
+	let output = []
+	let command = &grepprg . ' ' . substitute(a:grep_command, '^grep!\s*', '', '')
+	try
+		let job = job_start(command, {
+				\ 'out_cb': function('s:append_job_output', [output]),
+				\ 'err_io': 'null'
+				\ })
+	catch
+		return {'started': 0, 'cancelled': 0, 'lines': []}
+	endtry
+
+	if job_status(job) ==# 'fail'
+		return {'started': 0, 'cancelled': 0, 'lines': []}
+	endif
+
+	let cancelled = 0
+	try
+		call s:wait_job(job, -1)
+	catch /^Vim:Interrupt$/
+		let cancelled = 1
+	endtry
+	if cancelled || job_status(job) ==# 'run'
+		let cancelled = 1
+		call s:stop_job(job)
+	endif
+
+	return {'started': 1, 'cancelled': cancelled, 'lines': output}
+endfunction
+
 "-------------------------------------------------------
 " Run grep
 "-------------------------------------------------------
@@ -395,14 +466,21 @@ function! s:run_grep() abort
 	execute 'lcd '.s:gr.d.value
 
 	" Run grep
+	let grep_command = gr#grepcmd#grep(s:gr.p.value , s:gr.d.value , s:gr.f.value)
 	let start_time = reltime()
-	silent! execute gr#grepcmd#grep(s:gr.p.value , s:gr.d.value , s:gr.f.value)
-	let proc_time = substitute(reltimestr(reltime(start_time)), " ", "", "g")
-
-	" WSL環境だと外部grep終了後、画面表示が追いつかず乱れるため強制的に再描画せせる
+	let cancelled = 0
 	if g:gr_grepprg !=# 'vim grep'
-		redraw!
+		let result = s:run_grep_job(grep_command)
+		if result.started
+			let cancelled = result.cancelled
+			call setqflist([], ' ', {'lines': result.lines, 'efm': &grepformat})
+		else
+			silent! execute grep_command
+		endif
+	else
+		silent! execute grep_command
 	endif
+	let proc_time = substitute(reltimestr(reltime(start_time)), " ", "", "g")
 
 	" ヒット件数を取得
 	let hit_count = getqflist({'size': 1}).size
@@ -422,7 +500,11 @@ function! s:run_grep() abort
 		set modifiable
 		set nowrap
 
-		call s:msg('Special', printf(" %d hits. (%s sec)", hit_count, proc_time))
+		if cancelled
+			call s:msg('WarningMsg', printf("Search cancelled. %d partial hits. (%s sec)", hit_count, proc_time))
+		else
+			call s:msg('Special', printf(" %d hits. (%s sec)", hit_count, proc_time))
+		endif
 
 		" ハイライトが有効の場合の設定
 		if gr#is_opt('h')
@@ -431,7 +513,8 @@ function! s:run_grep() abort
 			let s:match_id = matchadd('Special', @/)
 		endif
 	else
-		call s:msg("WarningMsg", printf("Search pattern not found. (%s sec)", proc_time))
+		let message = cancelled ? "Search cancelled" : "Search pattern not found"
+		call s:msg("WarningMsg", printf("%s. (%s sec)", message, proc_time))
 	endif
 endfunction
 

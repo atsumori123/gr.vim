@@ -37,13 +37,13 @@ function! s:make_grep_cmd(search_pattern, start_directory, file_filter) abort
 	if stridx(a:file_filter, ',') >= 0
 		let f = " --include={*.".substitute(a:file_filter, ",", ",*.", "g")."}"
 	elseif a:file_filter != '*'
-		let f = ' --include=' . shellescape('*.' . a:file_filter)
+		let f = ' --include=*.' . a:file_filter
 	else
 		let f = ''
 	endif
 
-	let p = shellescape(a:search_pattern)
-	let d = shellescape(a:start_directory)
+	let p = a:search_pattern
+	let d = a:start_directory
 
 	return 'grep! ' . o . f . ' -- ' . p . ' ' . d
 endfunction
@@ -71,7 +71,7 @@ function! s:make_gitgrep_cmd(search_pattern, start_directory, file_filter) abort
 	endif
 	let f = f ==# '' ? '' : ' -- ' . f
 
-	let p = shellescape(a:search_pattern)
+	let p = a:search_pattern
 
     return 'grep! ' . o . ' ' . p . f
 endfunction
@@ -88,9 +88,9 @@ function! s:make_ripgrep_cmd(search_pattern, start_directory, file_filter) abort
 	" Encording(sjis/utf-8)
 	let o .= gr#is_opt('e') ? ' -E sjis' : ' -E utf8'
 
-	let p = shellescape(a:search_pattern)
-	let f = shellescape('*.{' . a:file_filter . '}')
-	let d = shellescape(a:start_directory)
+	let p = a:search_pattern
+	let f = '*.{' . a:file_filter . '}'
+	let d = a:start_directory
 
 	return 'grep! ' . o . ' -g ' . f . ' -e ' . p . ' ' . d
 endfunction
