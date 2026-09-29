@@ -60,8 +60,8 @@ function! s:make_menu() abort
 	call add(menu, s:str2dic(printf("%-15s", 'h. Highlight'), gr#is_opt('h') ? "*" : ""))
 
 	" エンコード(rgのみ)
-	if g:gr_grepprg ==# 'rg'
-		call add(menu, s:str2dic(printf("%-15s", '2. Encoding'), gr#is_opt('e') ? "*" : ""))
+	if g:gr_grepprg ==# 'rip grep'
+		call add(menu, s:str2dic(printf("%-15s", 'e. Encoding'), gr#is_opt('e') ? "*" : ""))
 	endif
 
 	let s:m_id = "m"
@@ -136,8 +136,8 @@ endfunction
 " popup_filter
 "-------------------------------------------------------
 function! s:popup_filter(winid, key) abort
-	" CRキーは'l'に化かす
-	let key  = a:key ==# "\<CR>" ? "l" : a:key
+	" CRキーは'CR'に化かす
+	let key  = a:key ==# "\<CR>" ? "CR" : a:key
 
 	" 行番号とキーを組み合わせてユニークなキーコードをつくる
 	call win_execute(a:winid, 'let w:lnum = line(".")')
@@ -159,7 +159,7 @@ function! s:popup_filter(winid, key) abort
 			call s:rerender_popup(a:winid, 1)
 			return 1
 
-		elseif key ==# 'p' || unqkey ==# '1e'		" 検索パターン
+		elseif key ==# 'p' || unqkey ==# '1CR'		" 検索パターン
 			call s:input_search_pattern(a:winid)
 			return 1
 
@@ -167,7 +167,7 @@ function! s:popup_filter(winid, key) abort
 			call s:show_history(a:winid, 'p', 'Search pattern')
 			return 1
 
-		elseif key ==# 'd' || unqkey ==# '2e'		" 検索開始ディレクトリ
+		elseif key ==# 'd' || unqkey ==# '2CR'		" 検索開始ディレクトリ
 			call s:input_start_directory(a:winid)
 			return 1
 
@@ -179,7 +179,7 @@ function! s:popup_filter(winid, key) abort
 			call win_execute(a:winid, 'normal! 2j')
 			return 1
 
-		elseif key ==# 'f' || unqkey ==# '3e'		" 検索フィルタ
+		elseif key ==# 'f' || unqkey ==# '3CR'		" 検索フィルタ
 			call s:input_file_filter(a:winid)
 			return 1
 
@@ -191,19 +191,19 @@ function! s:popup_filter(winid, key) abort
 			call win_execute(a:winid, 'normal! 2k')
 			return 1
 
-		elseif key ==# 'w' || unqkey ==# '5l'		" 単語検索
+		elseif key ==# 'w' || unqkey ==# '5CR'		" 単語検索
 			call s:toggle_option(a:winid, 'w')
 			return 1
 
-		elseif key ==# 'i' || unqkey ==# '6l'		" 大文字小文字
+		elseif key ==# 'i' || unqkey ==# '6CR'		" 大文字小文字
 			call s:toggle_option(a:winid, 'i')
 			return 1
 
-		elseif key ==# 'h' || unqkey ==# '7l'		" hlsearch
+		elseif key ==# 'h' || unqkey ==# '7CR'		" hlsearch
 			call s:toggle_option(a:winid, 'h')
 			return 1
 
-		elseif key ==# '2' || unqkey ==# '8l'		" Encoding
+		elseif key ==# 'e' || unqkey ==# '8CR'		" Encoding
 			call s:toggle_option(a:winid, 'e')
 			return 1
 		endif
