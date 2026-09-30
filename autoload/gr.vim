@@ -61,7 +61,7 @@ function! s:make_menu() abort
 
 	" エンコード(rgのみ)
 	if g:gr_grepprg ==# 'rip grep'
-		call add(menu, s:str2dic(printf("%-15s", 'e. Encoding'), gr#is_opt('e') ? "*" : ""))
+		call add(menu, s:str2dic(printf("%-15s", '1. Encoding'), gr#is_opt('e') ? "*" : ""))
 	endif
 
 	let s:m_id = "m"
@@ -80,6 +80,7 @@ function! s:open_popup() abort
 			\ 'borderchars'	: has('unix') ? [] : ['─','│','─','│','┌','┐','┘','└'],
 			\ 'padding'		: [1,2,1,2],
 			\ 'minwidth'	: 50,
+			\ 'minheight'	: len(s:menu),
 			\ 'cursorline'	: 1,
 			\ 'mapping'		: v:false,
 			\ 'title'		: printf(" G. %s ", g:gr_grepprg),
@@ -103,6 +104,9 @@ function! s:rerender_popup(winid, cursor_pos) abort
 	call popup_settext(a:winid, s:menu)
 	call popup_setoptions(a:winid, {'title' : printf(" G. %s ", g:gr_grepprg)})
 
+	" メニューの項目数の変化を考慮してウィンドウの高さを再設定
+	call popup_move(a:winid, {'minheight' : len(s:menu)})
+
 	" カーソルを指定のポジションに設定
 	call win_execute(a:winid, printf("call cursor(%d, 1)", a:cursor_pos))
 endfunction
@@ -118,14 +122,8 @@ function! s:show_history(winid, key, title) abort
 	" 画面IDを更新
 	let s:m_id = a:key
 
-	" リストをコピーしてメニューの高さになるように不足行を補う
-	let list = copy(item.old)
-	for i in range(len(item.old), len(s:menu) - 1 , 1)
-		call add(list, "")
-	endfor
-
 	" タイトルとメニューを表示
-	call popup_settext(a:winid, list)
+	call popup_settext(a:winid, item.old)
 	call popup_setoptions(a:winid, {'title' : printf(" %s history ", a:title)})
 
 	" カーソルを1行目に設定
@@ -136,8 +134,8 @@ endfunction
 " popup_filter
 "-------------------------------------------------------
 function! s:popup_filter(winid, key) abort
-	" CRキーは'CR'に化かす
-	let key  = a:key ==# "\<CR>" ? "CR" : a:key
+	" CRキーは'l'に化かす
+	let key  = a:key ==# "\<CR>" ? "l" : a:key
 
 	" 行番号とキーを組み合わせてユニークなキーコードをつくる
 	call win_execute(a:winid, 'let w:lnum = line(".")')
@@ -159,7 +157,7 @@ function! s:popup_filter(winid, key) abort
 			call s:rerender_popup(a:winid, 1)
 			return 1
 
-		elseif key ==# 'p' || unqkey ==# '1CR'		" 検索パターン
+		elseif key ==# 'p' || unqkey ==# '1e'		" 検索パターン
 			call s:input_search_pattern(a:winid)
 			return 1
 
@@ -167,7 +165,7 @@ function! s:popup_filter(winid, key) abort
 			call s:show_history(a:winid, 'p', 'Search pattern')
 			return 1
 
-		elseif key ==# 'd' || unqkey ==# '2CR'		" 検索開始ディレクトリ
+		elseif key ==# 'd' || unqkey ==# '2e'		" 検索開始ディレクトリ
 			call s:input_start_directory(a:winid)
 			return 1
 
@@ -179,7 +177,7 @@ function! s:popup_filter(winid, key) abort
 			call win_execute(a:winid, 'normal! 2j')
 			return 1
 
-		elseif key ==# 'f' || unqkey ==# '3CR'		" 検索フィルタ
+		elseif key ==# 'f' || unqkey ==# '3e'		" 検索フィルタ
 			call s:input_file_filter(a:winid)
 			return 1
 
@@ -191,19 +189,19 @@ function! s:popup_filter(winid, key) abort
 			call win_execute(a:winid, 'normal! 2k')
 			return 1
 
-		elseif key ==# 'w' || unqkey ==# '5CR'		" 単語検索
+		elseif key ==# 'w' || unqkey ==# '5l'		" 単語検索
 			call s:toggle_option(a:winid, 'w')
 			return 1
 
-		elseif key ==# 'i' || unqkey ==# '6CR'		" 大文字小文字
+		elseif key ==# 'i' || unqkey ==# '6l'		" 大文字小文字
 			call s:toggle_option(a:winid, 'i')
 			return 1
 
-		elseif key ==# 'h' || unqkey ==# '7CR'		" hlsearch
+		elseif key ==# 'h' || unqkey ==# '7l'		" hlsearch
 			call s:toggle_option(a:winid, 'h')
 			return 1
 
-		elseif key ==# 'e' || unqkey ==# '8CR'		" Encoding
+		elseif key ==# '1' || unqkey ==# '8l'		" Encoding
 			call s:toggle_option(a:winid, 'e')
 			return 1
 		endif
@@ -224,14 +222,6 @@ function! s:popup_filter(winid, key) abort
 			endif
 			return 1
 
-		elseif key ==# 'j' || key ==# 'k'
-			let item = s:get_item(s:m_id)
-			if type(item) == v:t_dict
-				let next = lnum + (key ==# 'j' ? 1 : -1)
-				let next = len(item.old) < next ? 1 : next < 1 ? len(item.old) : next
-				call win_execute(a:winid, printf("call cursor(%d, 1)", next))
-			endif
-			return 1
 		endif
 	endif
 

@@ -89,8 +89,15 @@ function! s:make_ripgrep_cmd(search_pattern, start_directory, file_filter) abort
 	let o .= gr#is_opt('e') ? ' -E sjis' : ' -E utf8'
 
 	let p = a:search_pattern
-	let f = '*.{' . a:file_filter . '}'
 	let d = a:start_directory
+
+	" file filter
+	let glob = printf('*.{%s}', a:file_filter)
+	if fnamemodify(&shell, ':t') =~? '^cmd\%(.exe\)\?$'
+		let f = glob
+	else
+		let f = shellescape(glob)
+	endif
 
 	return 'grep! ' . o . ' -g ' . f . ' -e ' . p . ' ' . d
 endfunction
